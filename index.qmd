@@ -4,13 +4,13 @@ subtitle: Decoding Bike Messenger Paths for Efficiency
 author: Maurin Huonder and Patrick Greber
 date: "18.06.2024"
 format:
-  html:
+  pdf:
     code-fold: true
 execute:
   warning: false
   message: false
   error:   true
-  cache:   true
+  cache:   false
 lang: en  
 bibliography: bibliography.bib
 ---
@@ -1185,8 +1185,6 @@ tm_shape(filtered_df) +
   tm_dots(col = "type") +
   tm_basemap(server = NULL) +
     tm_view(bbox =  box) 
-
-?tm_lines()
 
 ```
 
