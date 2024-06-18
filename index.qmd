@@ -3,14 +3,10 @@ title: Cycling Secrets
 subtitle: Decoding Bike Messenger Paths for Efficiency
 author: Maurin Huonder and Patrick Greber
 date: "18.06.2024"
-format:
-  pdf:
-    code-fold: true
+format: html
 execute:
   warning: false
   message: false
-  error:   true
-  cache:   false
 lang: en  
 bibliography: bibliography.bib
 ---
@@ -23,6 +19,8 @@ bibliography: bibliography.bib
 #| warning: false
 #| message: false
 #| results: 'hide'
+
+options(repos = c(CRAN = "https://cran.rstudio.com"))
 
 install.packages("pacman")
 library("pacman")
@@ -84,9 +82,7 @@ library("leaflet")
 library("XML")
 library("lubridate")
 library("forcats")
-library("purrr")
 library("httr")
-library("sp")
 library("hereR")
 library("png")
 library("gridExtra")
@@ -480,7 +476,7 @@ donner_seg <- filter(all_routes_seg, messenger == "donner")
 
 ```
 
-# Visualize Segmented Trajectories
+## Visualize Segmented Trajectories
 
 Visualize segmented GPS data of both messengers using a simple ggplot.
 
@@ -708,7 +704,7 @@ donner_cor <- filter(all_routes_seg_tunnel_cor, messenger == "donner")
 
 ```
 
-# Visualize Tunnel Merging
+## Visualize Tunnel Merging
 
 Visualize automated workflow for troubling tunnel problems
 
@@ -900,7 +896,7 @@ alternative <- st_zm(alternative, drop = TRUE)
 
 ```
 
-# Visualize Original and Alternative Trajectories
+## Visualize Original and Alternative Trajectories
 
 ```{r visualize alternative routing,  fig.height= 9, fig.width=9, fig.align='center'}
 
@@ -1166,7 +1162,7 @@ st_geometry(filtered_df) <- st_geometry(near_to)
 
 ```
 
-# Visualize Map Matching
+## Visualize Map Matching
 
 Interactive visualization of map matching results
 
@@ -1493,7 +1489,7 @@ print(parrange3)
 
 ```
 
-# Visualize alternatives and originals
+## Visualize alternatives and originals
 
 ```{r visualize original and alternatives per messenger, fig.width=12, fig.height=12}
 
@@ -1719,5 +1715,6 @@ original_final <- new |>
 #| eval: false
 wordcountaddin::word_count("index.qmd")
 ```
+
 
 
