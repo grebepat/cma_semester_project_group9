@@ -3,10 +3,13 @@ title: Cycling Secrets
 subtitle: Decoding Bike Messenger Paths for Efficiency
 author: Maurin Huonder and Patrick Greber
 date: "18.06.2024"
-format: html
+format: 
+  html:
+    code-fold: true
 execute:
   warning: false
   message: false
+  cache:   true
 lang: en  
 bibliography: bibliography.bib
 ---
