@@ -529,7 +529,7 @@ p_seg_raeubertochter <- ggplot() +
 p_seg_donner <- ggplot() +
   geom_sf(data = outline, alpha = 0) +
   geom_sf(data = donner_seg, aes(color = segment_id), size = 0.6) +
-     scale_color_manual(values = my_palette(36)) +
+     scale_color_manual(values = my_palette(37)) +
   coord_sf(datum = st_crs(2056)) +
   labs(x = "E",
        y = "N") +
@@ -1056,7 +1056,7 @@ print(parrange2)
 
 ```
 
-# Task 7: Combining Trajectories and Alternatives into a singel Data Frame
+# Task 7: Combining Trajectories and Alternatives into a single Data Frame
 
 ```{r combined dataset}
 
@@ -1077,7 +1077,6 @@ alternative <- alternative |>
   mutate(
     type = as.character("alternative"),
     segment_id = as.numeric(segment_id)
-    
   )
 
 #combine the dataset
@@ -1119,7 +1118,7 @@ common_ids <- intersect(original_ids, alternative_ids)
 
 length(unique(common_ids))
 
-######### ATTENTION: Whenever we compute alternatives with the API from here, other alternatives are gereated and some are not. This changes with every computation!!! 
+######### ATTENTION: Whenever we compute alternatives with the API from here, other alternatives are generated and some are not. This changes with every computation!!! 
 
 ## Latest computation: 50 matching segments
 
@@ -1663,7 +1662,7 @@ new <- traj_cleaned |>
   na.omit()
 
 
-# setting travel distance to 10m manually, travelled distance was 10m on the line, so euclidiean distance is a little usless here..
+# setting travel distance to 10m manually, traveled distance was 10m on the line, so euclidiean distance is a little useless here..
 new$travel_dist = 10
 
   
@@ -1708,7 +1707,7 @@ original_final <- new |>
 
 # Task 10: Results
 
-Diese Tabelle nach jedem Druchgang neu anpassen...
+Adjust this table after each cycle...
 
 |                           |       | original |       |       | alternative |       |       |
 |---------|---------|:--------|:--------|:--------|:--------|:--------|:--------|
@@ -1761,7 +1760,7 @@ results <- new %>%
   )
 
 
-## Descriptive analysis - average and max. slopes over 100m subsegments
+## Descriptive analysis - average and max. slopes over 100m sub segments
 results |> 
   st_drop_geometry() |> 
   group_by(type) |> 
