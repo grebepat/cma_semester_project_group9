@@ -7,7 +7,11 @@ bibliography: bibliography.bib
 
 ## Abstract
 
-This project explores the possibility of determine the perception of route choice of bike messengers in the city of Zurich. This is done by comparing chosen trajectories with auto generated alternative trajectories. We compare the paths of chosen routes (deliveries) with a the generated set of modeled routes (choice-set/alternatives) in terms of distance traveled, maximum slope and street type. Our analysis based on xxx shift performed by 4 messengers. Street network and attributes are taken from the Swisstlm3d data set. Which allows to add attributes such as traveled distance, slope, traffic volumes, street type and width, and the number of intersections.
+This work explores the possibility of determine the perception of route choice of bike messengers in the city of Zurich. This is done by comparing chosen trajectories with auto generated alternative trajectories. We compare paths of chosen routes (deliveries) with a the generated set of modeled routes (choice-set/alternatives) in terms of distance traveled, maximum slope and street width Our analysis is based on 95 shift performed by 4 messengers. Street network and attributes were taken from the Swisstlm3d data set. Which allows to add attributes such as traveled distance, slope, traffic volumes, street type and width, and the number of intersections.
+
+## Introduction
+
+Route choice models play an important role in many transport applications, for example, intelligent transport systems, GPS navigation and transportation planning @Freijnger2007. Modeling route choice behavior is essential, given the possibility to appraise travelers perceptions of route characteristics and to forecast travelers' behavior under hypothetical scenarios @Prato2009. Route choice models can assess travelers' perceptions of various route characteristics such as distance, travel time, cost, number of traffic lights and road types, and relate the results to the individuals' characteristics (e.g. gender, age, income and trip purpose) and can not only help analyzing and understanding travelers' behavior, but also constitute the essential part of traffic assignment methods. Several studies have used route choice modelling to investigate preferences of cyclists in cities for different purposes such as effectiveness of investments in bicycle infrastructure @hood2011. This work takes a different approach by exploring route choices of bike messengers. Analyzing the route choices of bike messengers compared to ordinary cyclists can provide insights into efficiency and safety. Due to the fact that bike messengers, are often under time pressure and have a excellent knowledge of the street network, they may choose faster routes, even if they are longer in terms of distance. Additionally, as experienced cyclists, bike messengers can also choose safer or less traveled routes, which can lead to conclusions for the general safety of all cyclists in cities. Furthermore, routes chosen by bike messengers can offer important data on the usage of the city's cycling infrastructure. This can guide decisions on where to focus improvements and enhance route planning and traffic management.
 
 ## Research Questions
 
@@ -17,15 +21,11 @@ This project explores the possibility of determine the perception of route choic
 
 3.  Is there a combination of above criteria that would be preferable in terms of speed/convenience?
 
-## Introduction
-
-Route choice models play an important role in many transport applications, for example, intelligent transport systems, GPS navigation and transportation planning @Freijnger2007. Modeling route choice behavior is essential, given the possibility to appraise travelers perceptions of route characteristics and to forecast travelers' behavior under hypothetical scenarios @Prato2009. Route choice models can assess travelers' perceptions of various route characteristics such as distance, travel time, cost, number of traffic lights and road types, and relate the results to the individuals' characteristics (e.g. gender, age, income and trip purpose). Route choice models not only help analyzing and understanding travelers' behavior, but also constitute the essential part of traffic assignment methods. In the deterministic user equilibrium (DUE) problem, a simple route choice model assumes. Several studies have used route choice modelling to investigate preferences of cyclists in cities for different purposes such as effectiveness of investments in bicycle infrastructure @hood2011. This work takes a different approach by exploring route choices of bike messengers. Analyzing the route choices of bike messengers compared to ordinary cyclists can provide insights into efficiency and safety. Due to the fact that bike messengers, are often under time pressure and have a excellent knowledge of the street network, they may choose faster routes, even if they are longer in terms of distance. Additionally, as experienced cyclists, bike messengers may opt for safer routes or those with less traffic, contributing to the overall safety of all cyclists. Furthermore, routes chosen by bike messengers can offer important data on the usage of the city's cycling infrastructure. This can guide decisions on where to focus improvements and enhance route planning and traffic management.
-
 ## Data
 
 ### GPS Data
 
-We utilized GPS data collected with the fitness-tracking-app Strava. The data was collected by two bike messengers in Zurich and conducted as GPX files. The two messengers have been assigned aliases for the purpose of this analysis. They are referred to as “donner” and “raeubertochter  The data encompasses approximately 95 shifts, with each shift including multiple trajectories/deliveries. The shifts vary in terms of distance traveled, working hours, and the number of deliveries.
+We utilized GPS data collected with the fitness-tracking-app Strava. The data was collected by two bike messengers in Zurich and conducted as GPX files. The two messengers have been assigned aliases for the purpose of this analysis. They are referred to as "donner" and "raeubertochter" The data encompasses 95 shifts, with each shift including multiple trajectories/deliveries. The raw data contains a total number of xyz data points. The shifts vary in terms of distance traveled, working hours, season, weather and the number of deliveries.
 
 ### Street Data
 
@@ -39,11 +39,9 @@ SwissTLM3D: Provided the street network, street type, and width. SwissALTI3D: Us
 
 The segmentation of GPS data into different segments was achieved by analyzing the time differences between consecutive data points. Since Strava data already eliminates most static points, it allowed us to rely solely on significant time gaps for the segmentation. Thus, a moving time window was created for each route, and the mean time difference was calculated for each messenger. A new segment was then defined as any instance where the mean time difference exceeded a threshold of 20 seconds. The data was further refined by removing static rows and any segments shorter than two minutes. Each segment was then assigned a unique ID, and the number of differentiated segments was calculated for each messenger. Resulting in 36 deliveries for 'donner', and 22 deliveries for 'raeubertochter'.
 
-
 ### Map Matching
 
 Map matching denotes the process of assigning positional data (mostly in form of GPS coordinates) to some geographic information about the infrastructure, most commonly road networks @Meister2021. In our map matching process, we unified all roads into a single network. We then located the nearest point on this network for each GPS location and were then used to update the original GPS locations, effectively mapping each GPS point to its closest location on the road network.
-
 
 ### Alternative Trajectories
 
@@ -57,15 +55,14 @@ To solve this, we interpolated along the trajectories. We simplified the dataset
 
 ## Descriptive Analysis
 
+  
+
 ## Results
+
+
 
 ## Discussion
 
 ### Limitations in generating alternative trajectories
 
-In our work, we encountered a significant challenge while using the hereR package to generate alternative trajectories as our access to the API was limited. This limitation severely restricted our ability to generate alternative routes, allowing us to produce only one alternative route per delivery for a single shift per messenger. Despite having a database of over 100 shifts, we were unable to generate an alternative for each shift per messenger.
-
-We attempted to mitigate this issue by running the routing function twice for each messenger on at least the first day, ensuring that all routes had an alternative. However, due to our restricted access to the here API, we were unable to generate an alternative for every single original trajectory.
-
-Before proceeding with our calculations, it was necessary to filter the segments to ensure that each one had both an original route and an alternative. This step was crucial to maintain the integrity of our subsequent analyses.
 
