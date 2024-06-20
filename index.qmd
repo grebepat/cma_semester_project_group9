@@ -1721,3 +1721,1940 @@ wordcountaddin::word_count("index.qmd")
 
 
 
+=======
+---
+title: Cycling Secrets
+subtitle: Decoding Bike Messenger Paths for Efficiency
+author: Maurin Huonder and Patrick Greber
+date: "18.06.2024"
+format: 
+  html:
+    code-fold: true
+execute:
+  warning: false
+  message: false
+  cache:   true
+lang: en  
+bibliography: bibliography.bib
+---
+
+# Install Packages
+
+```{r install required packages}
+
+#| echo: false
+#| warning: false
+#| message: false
+#| results: 'hide'
+
+options(repos = c(CRAN = "https://cran.rstudio.com"))
+
+install.packages("pacman")
+library("pacman")
+
+
+p_install("dplyr", force = FALSE)
+p_install("ggplot2", force = FALSE)
+p_install("readr", force = FALSE)
+p_install("tidyr", force = FALSE)
+p_install("sf", force = FALSE)
+p_install("terra", force = FALSE)
+p_install("tmap", force = FALSE)
+p_install("zoo", force = FALSE)
+p_install("units", force = FALSE)
+p_install("patchwork", force = FALSE)
+p_install("tidyverse", force = FALSE)
+p_install("leaflet", force = FALSE)
+p_install("shiny", force = FALSE)
+p_install("XML", force = FALSE)
+p_install("lubridate", force = FALSE)
+p_install("ggh4x", force = FALSE)
+p_install("forcats", force = FALSE)
+p_install("purrr", force = FALSE)
+p_install("viridis", force = FALSE)
+p_install("httr", force = FALSE)
+p_install("hereR", force = FALSE)
+p_install("sp", force = FALSE)
+p_install("ggpubr", force = TRUE)
+p_install("png", force = FALSE)
+p_install("grid", force = FALSE)
+p_install("raster", force = FALSE)
+p_install("gridExtra", force = FALSE)
+p_install("RColorBrewer", force = FALSE)
+
+
+```
+
+# Load libraries
+
+Load necessary libraries
+
+```{r load necessary libraries}
+
+#| echo: false
+#| warning: false
+#| message: false
+
+library("ggh4x")
+library("dplyr")
+library("ggplot2")
+library("tidyr")
+library("sf")
+library("sp")
+library("terra")
+library("tmap")
+library("zoo")
+library("tidyverse")
+library("leaflet")
+library("XML")
+library("lubridate")
+library("forcats")
+library("httr")
+library("hereR")
+library("png")
+library("gridExtra")
+library("RColorBrewer")
+
+
+```
+
+# Task 1: Import Express: Bringing GPS Data Onboard
+
+Import gps data from bike messengers
+
+```{r import raw gps data}
+
+#| warning: false
+#| message: false
+#| results: 'hide'
+
+## generate a list of all filenames including the path from the subfolder they are stored in
+file <- list.files("gps_files_shared", recursive = TRUE, pattern = "\\.gpx$", full.names = TRUE)
+
+
+## Function to extract messenger and id from file path
+extract_info <- function(file) {
+  messenger <- as.factor(gsub(".*/gps_files_([^/]+)/.*", "\\1", file))
+  id <- as.factor(paste(gsub('.*/(.*).gpx','\\1', file), gsub(".*/gps_files_([^/]+)/.*", "\\1", file), sep = "_"))
+  list(messenger = messenger, id = id)
+}
+
+
+## Function to process each file
+process_file <- function(file) {
+  df <- st_read(file, "track_points")
+  
+  info <- extract_info(file)
+  df$messenger <- info$messenger
+  df$id <- info$id
+  
+  df_sf <- st_as_sf(df, coords = c("lon", "lat"), crs = 4326, remove = FALSE)
+  df_sf <- st_transform(df_sf, crs = 2056)
+  df_sf$shift <- gsub('.*/(.*).gpx','\\1', file)
+  df_sf$x <- st_coordinates(df_sf)[,1]
+  df_sf$y <- st_coordinates(df_sf)[,2]
+  df_sf <- select(df_sf, id, messenger, shift, time, x, y, ele, geometry)
+  
+  df_sf$origin <- file
+  df_sf
+}
+
+
+## Apply the function to each file using purrr's map function
+single_routes <- purrr::map(file, process_file)
+
+
+## Combine all results
+all_routes <- do.call(rbind, single_routes)
+
+## Seperate file into raeubertochter and donner
+raeubertochter_raw <- filter(all_routes, messenger == "raeubertochter")
+donner_raw <- filter(all_routes, messenger == "donner")
+
+
+## Our raw data covers one shift per messenger, a total of 11'699 fixes were recorded:
+### raeubertochter: 23.10.2023, 12:59:44 - 17:51:21, 7102 fixes
+### donner: 30.01.2024, 10:21:41 - 22:14:27, 4597 fixes
+
+```
+
+# Task 2: Import Spatial Data
+
+Import spatial data. Geopackage was preprocessed using Quantum GIS Version 3.34.5.
+
+```{r import spatial data}
+
+#| warning: false
+#| message: false
+#| results: 'hide'
+
+## All Spatial Data is stored in a geopackage called basic_data. Basic_data consists of several layers such as the street network, surface type or housing footprint. The layers were preprocessed and cliped to the extent of the city outline of zurich using Quantum GIS Version 3.34.5
+
+
+## Show layers in basic_data.gpkg
+st_layers("gis_files/basic_data.gpkg")
+
+
+## Import street network from zurich, based on the swisstlm3d
+streets <- read_sf("gis_files/basic_data.gpkg", "street_network_z") |> 
+   select(objektart, geom) |> 
+  mutate(
+    objektart = as.factor(objektart),
+    width = as.numeric(substr(objektart, start = 1, stop = 1)),
+  ) |> 
+  na.omit()
+
+
+## Import city border of zurich
+outline <- read_sf("gis_files/basic_data.gpkg", "city_outline")
+
+
+## Import housing footprint of zurich
+housing <- read_sf("gis_files/basic_data.gpkg", "housing_footprint") |> 
+   select(objektart, geom) |>
+  mutate(
+    objektart = as.factor(objektart)
+  )
+
+
+## Import surface type of zurich
+surface <- read_sf("gis_files/basic_data.gpkg", "surface_type") |> 
+   select(art, geom) |> 
+  mutate(
+    art = as.factor(art)) |> 
+ filter(art == "fliessendes Gewässer" | art == "stehendes Gewässer" | art == "Strasse, Weg" | art == "Verkehrsinsel") |> 
+  na.omit()
+
+
+## Import digital height model DHM25, a set of data representing the 3D form of the earth’s surface without vegetation and buildings
+height <- terra::rast("gis_files/dhm25_zh.tif")
+
+
+```
+
+## Visualize raw Data
+
+Visualize raw GPS data of both messengers using a simple ggplot.
+
+```{r visualize raw data via ggplot}
+
+#| layout-ncol: 2
+#| fig-cap: 
+#|   - "Line Plot 1"
+#|   - "Line Plot 2"
+
+## Visualize the raw gps data from each messenger
+
+
+### Raeubertochter
+p_raw_raeubertochter <- ggplot() +
+  geom_sf(data = outline, alpha = 0) +
+  geom_sf(data = raeubertochter_raw, aes(color = "red"), size = 0.6) +
+  coord_sf(datum = st_crs(2056)) +
+  labs(x = "E",
+       y = "N") +
+    theme_minimal() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "Raeubertochter")
+
+
+### Donner
+p_raw_donner <- ggplot() +
+  geom_sf(data = outline, alpha = 0) +
+  geom_sf(data = donner_raw, aes(color = "red"), size = 0.6) +
+  coord_sf(datum = st_crs(2056)) +
+  labs(x = "E",
+       y = "N") +
+  theme_minimal() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "Donner")
+
+## Arrange plots together
+grid.arrange(p_raw_raeubertochter,p_raw_donner, nrow=1, ncol=2)
+
+
+```
+
+Subsample of raw data in a smaller spatial context
+
+```{r visualize raw data via tmap and spatial context}
+
+#| fig-cap: 
+#|   - "Line Plot 1"
+#|   fig-width: 8
+#|   fig-height: 6
+#|   fig-dpi: 500
+
+
+
+## Next, we want to visualize a subsample of our raw data in a smaller spatial context
+## visualize Subsample in spatial context
+
+
+## fixing an extent for a subsample of raeubertochter
+coords <- rbind(c(2681695, 1247822), c(2683188, 1247822), c(2683188, 1246616), c(2681695, 1246616), c(2681695, 1247822))
+
+
+## create an extent polygon
+polygon <- st_polygon(list(coords))
+
+
+## convert to spatial object
+extent_raeubertochter <- st_sfc(polygon, crs = 2056)
+
+
+## clip spatial data to extent to reduce data points and speed up computing
+housing_raeubertochter <- st_intersection(housing, extent_raeubertochter)
+streets_raeubertochter <- st_intersection(streets, extent_raeubertochter)
+surface_raeubertochter <- st_intersection(surface, extent_raeubertochter)
+raeubertochter_ext <- st_intersection(raeubertochter_raw, extent_raeubertochter)
+
+
+## Reduce data set to every second gps fix to get a better overview
+subset_raeubertochter_raw <- raeubertochter_ext[seq(1, nrow(raeubertochter_ext), by = 2), ]
+
+
+## map including spatial context of zurich
+
+tmap_mode("plot")
+tm_raw_context <- tm_shape(streets_raeubertochter, bbox = extent_raeubertochter) +
+  tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +
+tm_shape(housing_raeubertochter, bbox = extent_raeubertochter) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = .9) +
+tm_shape(subset_raeubertochter_raw, bbox = extent_raeubertochter) +
+  tm_symbols(size = 0.6, col = "red",  alpha = 0.7, border.col = "red", legend.col.show = FALSE) +
+  tm_layout(frame = FALSE)
+
+
+## show map
+print(tm_raw_context)
+
+
+## save as a png
+# tmap_save(tm_raw_context, "raeubertochter_raw.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+```
+
+Visualize raw data via interactive map
+
+```{r visualize raw data via interactive map}
+
+## Browse trough raw_data
+
+raw_data <- all_routes[seq(1, nrow(all_routes), by = 2), ]
+
+tmap_mode("view")
+
+tm_shape(raw_data) +
+  tm_symbols(size = .25, col = "messenger",  alpha = 0.7, legend.col.show = FALSE, palette = c("red", "yellow"), border.col = "black", border.lwd = 0.1) +
+  tm_layout(frame = FALSE) +
+  tm_basemap(server = "CartoDB.PositronNoLabels", alpha = 0.75) +
+  tm_view(symbol.size.fixed = F) +
+  tm_facets(by = "messenger", sync = TRUE, ncol = 2)
+
+
+```
+
+# Task 3: Signal Sync: Assessing Sampling Intervals Across Messenger GPS Systems
+
+```{r assessing sampling intervals}
+
+## If a larger sampling grid is needed: selecting every 10th row from  movement data:
+###all_routes <- all_routes[seq(from = 1, to = #nrow(all_routes), by = 5), ]
+
+
+## calculate rowwise time difference
+all_routes <- all_routes |> 
+    group_by(id) |> 
+    mutate(
+    time_difference = as.numeric(difftime(time, lag(time), units = "secs"))) |>
+    ungroup()
+
+
+## How do the time difference differ between messengers?
+all_routes |> 
+  group_by(id) |> 
+  filter(time_difference <= 30) |> # remove outliers to get a clearer view on the average sampling intervall
+  summarise(
+    mean <- mean(time_difference, na.rm = T)
+    )
+
+## Both with similair time difference between fixes, raeubertochter with slightly shorter intervalls
+
+
+## max value between two fixes, in min
+max(all_routes$time_difference, na.rm = T) / 60
+
+## max time difference at 50min
+
+```
+
+Visualize sampling intervall
+
+```{r visualize sampling intervals via ggplot}
+
+#| fig-cap: 
+#|   - "Line Plot 1"
+#|   fig-width: 8
+#|   fig-height: 6
+
+
+## Quick overview how time differences distribute
+p_sampling_interval <- ggplot(all_routes, aes(x = time_difference)) +
+  geom_histogram(binwidth = 0.25, col = "white", fill = "grey25") +
+  scale_y_log10() +
+  scale_x_log10() +
+  labs(x = "Time Difference in sec. (Log Scale)", y = "Count (Log Scale)") +
+  ggtitle("Histogram of Time Differences with Log Y Axis and Log X Axis") +
+  facet_wrap(all_routes$id) +
+  theme_minimal()
+
+
+## show histogram
+print(p_sampling_interval)
+
+# Both with similar but slightly different sampling regimes, raeubertochter with an intervall of ~1 second. It seems that static time is already removed in here dataset -> strava data! Most time differences between 1 and 10 seconds, some outliers at more than 1000 seconds
+
+# Donner with more variation between fixes, but still short intervals, might need another segmentation...
+
+```
+
+# Task 4: From Dots to Drops: Segmenting GPS Fixes into Deliveries
+
+```{r segmenting deliveries}
+
+## For seperating the gps data into different segments, we analyse time differences between them. As strava data already removes most of the static points we're in no need to calculate mean_step's but can solely relay on big time gaps.
+
+
+## create a moving time window
+all_routes_seg <- all_routes |> 
+   group_by(id) |> 
+   mutate(
+        nMinus2 = difftime(time, lag(time, 2)), 
+        nMinus1 = difftime(time, lag(time,1)),  
+        nPlus1  = difftime(lead(time, 1), time), 
+        nPlus2  = difftime(lead(time, 2), time)  
+    )
+
+
+## calculate rowwise mean distance per messenger
+all_routes_seg <- all_routes_seg |> 
+    group_by(id) |>
+    mutate(
+        timeMean = (nMinus2 + nMinus1 + nPlus1 + nPlus2) / 4
+    ) |>
+    ungroup()
+
+
+## create a new column static, based on time_difference (over 20s time difference)
+all_routes_seg <- all_routes_seg |> 
+  mutate(new_segment = timeMean > 20)
+
+## As strava already removed most static points, we're able to seperate segments via time_difference only. We work with a treshold t of 20 seconds.
+
+
+## it assigns unique IDs based on the column static
+rle_id <- function(vec) {
+    x <- rle(vec)$lengths
+    as.factor(rep(seq_along(x), times = x))
+}
+
+
+## removes static rows
+all_routes_seg <- all_routes_seg |>
+    mutate(temp_id = rle_id(new_segment)) |> 
+    filter(!new_segment)
+
+
+## remove segments shorter than two minuntes
+all_routes_seg <- all_routes_seg |> 
+  group_by(temp_id) |> 
+  mutate(duration = difftime(max(time), min(time))
+  ) |> 
+  filter(!duration < 120) |> 
+  ungroup()
+
+
+## Assining new segment_id starting at one, credits to: https://stackoverflow.com/questions/39650511/r-group-by-variable-and-then-assign-a-unique-id
+all_routes_seg <- all_routes_seg |> 
+  group_by(temp_id, messenger) |> 
+  mutate(segment_id = as_factor(cur_group_id())) |> 
+  ungroup() |> 
+  select(-temp_id)
+
+
+## how many segments have been differentiated?
+all_routes_seg |> 
+  group_by(messenger) |> 
+  summarise(length(unique(segment_id)))
+
+## donner with 36 deliveries
+## raeubertochter with 22 deliveries
+
+
+## filter segments according to messenger
+raeubertochter_seg <- filter(all_routes_seg, messenger == "raeubertochter")
+donner_seg <- filter(all_routes_seg, messenger == "donner")
+
+
+```
+
+## Visualize Segmented Trajectories
+
+Visualize segmented GPS data of both messengers using a simple ggplot.
+
+```{r visualize segmented data via ggplot}
+
+#| layout-ncol: 2
+#| fig-cap: 
+#|   - "Line Plot 1"
+#|   - "Line Plot 2"
+
+
+## Visualize the segmented gps data from each messenger
+### Raeubertochter
+
+## create own color palette
+my_palette <- colorRampPalette(brewer.pal(11, "Spectral"))
+
+
+## visualiaze raeubertochter deliveries
+p_seg_raeubertochter <- ggplot() +
+  geom_sf(data = outline, alpha = 0) +
+  geom_sf(data = raeubertochter_seg, aes(color = segment_id), size = 0.6) +
+   scale_color_manual(values = my_palette(22)) +
+  coord_sf(datum = st_crs(2056)) +
+  labs(x = "E",
+       y = "N") +
+    theme_minimal() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "Raeubertochter")
+
+
+## visualiaze donner deliveries
+p_seg_donner <- ggplot() +
+  geom_sf(data = outline, alpha = 0) +
+  geom_sf(data = donner_seg, aes(color = segment_id), size = 0.6) +
+     scale_color_manual(values = my_palette(36)) +
+  coord_sf(datum = st_crs(2056)) +
+  labs(x = "E",
+       y = "N") +
+  theme_minimal() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "Donner")
+
+
+## Arrange both plots together
+grid.arrange(p_seg_raeubertochter,p_seg_donner, nrow=1, ncol=2)
+
+```
+
+Subsample of segmented data in a smaller spatial context
+
+```{r visualize segmented data via tmap and spatial context, fig.height=6, fig.width=8, fig.dpi=500}
+
+#| fig-cap: 
+#|   - "Line Plot 1"
+#|   fig-width: 8
+#|   fig-height: 6
+
+
+### Next, we want to visualize a subsample of our segmented data in a smaller spatial context
+## Visualize Subsample in spatial context
+
+
+## Clip segmented data to a smaller extent to reduce computing time
+raeubertochter_ext2 <- st_intersection(raeubertochter_seg, extent_raeubertochter)
+
+
+## create smaller subsample consisting of every second point to get a better overview
+subset_raeubertochter_seg <- raeubertochter_ext2[seq(1, nrow(raeubertochter_ext2), by = 2), ]
+
+
+## transform segment_id to numeric and back to factor
+subset_raeubertochter_seg$segment_id <- as.numeric(subset_raeubertochter_seg$segment_id)
+subset_raeubertochter_seg$segment_id <- as.factor(subset_raeubertochter_seg$segment_id)
+unique(subset_raeubertochter_seg$segment_id)
+
+## Create own color palette
+my_palette2 <- c("#9E0142", "#F46D43", "#FFFF66", "#66C2A5","#3288BD", "#5E4FA2")
+
+
+tmap_mode("plot")
+
+
+tm_seg_context <- tm_shape(streets_raeubertochter, bbox = extent_raeubertochter) +
+  tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +
+tm_shape(housing_raeubertochter, bbox = extent_raeubertochter) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = .9) +
+tm_shape(subset_raeubertochter_seg, bbox = extent_raeubertochter) +
+  tm_symbols(size = 0.6, col = "segment_id", palette = my_palette2, alpha = 0.7, border.col = "NA", legend.col.show = FALSE) +
+  tm_layout(frame = FALSE) 
+
+
+## Show map
+print(tm_seg_context)
+
+
+## save as png
+# tmap_save(tm_seg_context, "raeubertochter_seg.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+
+```
+
+Visualize raw data via interactive map
+
+```{r visualize segmented data via interactive map}
+
+seg_data <- all_routes_seg[seq(1, nrow(all_routes), by = 2), ]
+
+tmap_mode("view")
+
+tm_shape(raw_data) +
+  tm_symbols(size = .25, col = "messenger",  alpha = 0.7, legend.col.show = FALSE, palette = "Spectral", border.col = "black", border.lwd = 0.1) +
+  tm_layout(frame = FALSE) +
+  tm_basemap(server = "CartoDB.PositronNoLabels", alpha = 0.75) +
+  tm_view( symbol.size.fixed = F) +
+  tm_facets(by = "messenger", sync = TRUE, ncol = 2)
+
+```
+
+# Task 5: Lost in Transit: Tackling Tunnel GPS Blackouts for Bike Messenger
+
+```{r tackling tunnel gps blackouts}
+
+## problem: we loose gps signal in the bicycle tunnel from enge to sihlhölzli. Our segmentation splits the trajectories into two separate deliveries, even though it's the same route. We try to recognize split segments that we're falsely segmented:
+all_routes_seg_tunnel <- all_routes_seg
+
+
+## extraxt first and last points of each segment
+first_last_points <- all_routes_seg_tunnel |> 
+  group_by(segment_id) |> 
+  slice(c(1, n())) |> 
+  ungroup()
+
+
+## Create entry and exit points at the tunnel. For future project, there might be a data set with tunnel entities, where we could extract the entry and exit points automatically
+tunnel_exit <- st_sfc(st_point(c(2682368, 1246996)), crs = 2056)
+tunnel_entry <- st_sfc(st_point(c(2682592, 1246751)), crs = 2056)
+
+
+## create a buffer around the tunnel entry and exit,
+# tunnel_points <- st_sfc(tunnel_entry, tunnel_exit, crs = 2056)
+buffer_entry <- st_buffer(tunnel_entry, dist = 50)
+buffer_exit <- st_buffer(tunnel_exit, dist = 50)
+
+
+## Identify segments within the buffer
+first_last_points_within <- first_last_points |> 
+  mutate(
+    intersect_start = sapply(st_intersects(geometry, buffer_entry, sparse = FALSE), any),
+    intersect_end = sapply(st_intersects(geometry, buffer_exit, sparse = FALSE), any)
+  ) |> 
+  filter(intersect_start | intersect_end)
+
+
+## Calculate time difference between end of one segment and start of the next
+first_last_points_within <- first_last_points_within |> 
+  arrange(segment_id, time) |> 
+  mutate(time_diff = time - lag(time))
+
+
+## Match segments where time difference is less than 2 minutes -> falsely separated segments!
+matched_segments <- first_last_points_within |> 
+  filter(time_diff <= 120 | is.na(time_diff) ) |> 
+  mutate(new_segment_id = lag(segment_id)) |> 
+  select(x,y,geometry,time_diff, segment_id, new_segment_id)
+
+## recognize start- and endpoints of segments that lay within the buffer and are only separated by 2 minutes
+
+########## FOR FUTURE PROJECTS -> try to implement matching via segment_id, not time difference! If we make the assumption that we separate trajectories in the tunnel, we can assume that falsely separated segments follow each other. Segments were falsely separated when an endpoint of segment_id 13 and a starting point of segment_id 14 lay within the corresponding buffers. Would be a much cleaner approach! 
+
+
+## create a table with falsely seperated segment_id's
+lookup_table <- matched_segments |> 
+  filter(!is.na(new_segment_id) & segment_id != new_segment_id) |> # filter rows where new and old segment_id's do not match
+  select(segment_id, new_segment_id)  |> 
+  distinct() # replace duplicates
+
+
+## We recognized one falsely seperated trajecotry. Segment 49 and 50 we're seperated but should be kept together
+
+
+## In this case, we could merge the segments back together manually. but with larger dataset, this might not be feasible. That's why we try a more general approach:
+
+
+## create a lookup_vector based on our lookup_table. credits go to: https://stackoverflow.com/questions/35636315/replace-values-in-a-dataframe-based-on-lookup-
+
+
+## This transforms the lookup table into a vector where the names are segment_id and the values are new_segment_id. This vector will be used to quickly find and replace old segment IDs with new ones.
+lookup_vector <- setNames(lookup_table$new_segment_id, lookup_table$segment_id)
+
+
+## match segment_id's with our lookup_vector. For each segment_id in all_routes_seg_tunnel, it checks if that ID is in the lookup vector. If it is, it replaces it with the corresponding new_segment_id from the lookup vector; if not, it keeps the original segment_id
+all_routes_seg_tunnel$segment_id_new <- ifelse(all_routes_seg_tunnel$segment_id %in% names(lookup_vector), lookup_vector[match(all_routes_seg_tunnel$segment_id, names(lookup_vector))], all_routes_seg_tunnel$segment_id)
+
+
+## tidy up our corrected dataframe
+all_routes_seg_tunnel_cor <- all_routes_seg_tunnel |> 
+  group_by(segment_id_new, messenger) |> 
+  mutate(segment_id_cor = as_factor(cur_group_id())) |> 
+  select(-segment_id, -segment_id_new) |> 
+  ungroup()
+
+
+## How many deliveries after the correction?
+all_routes_seg_tunnel_cor |> 
+  group_by(messenger) |> 
+  summarise(length(unique(segment_id_cor)))
+
+
+## donner with 36 deliveries
+## raeubertochter with 21 deliveries
+
+
+## seperate into raeubertochter
+raeubertochter_cor <- filter(all_routes_seg_tunnel_cor, messenger == "raeubertochter")
+
+
+## and donner
+donner_cor <- filter(all_routes_seg_tunnel_cor, messenger == "donner")
+
+
+```
+
+## Visualize Tunnel Merging
+
+Visualize automated workflow for troubling tunnel problems
+
+```{r visualize corrected segments}
+
+#| fig-cap: 
+#|   - "Line Plot 1"
+#|   - "Line Plot 2"
+#|   - "Line Plot 3"
+#|   - "Line Plot 4"
+
+### we want to visualize the correction progress from the original segmentation to the corrected version including our tunnel probelm
+
+tmap_mode("plot")
+
+## create a background for future maps
+background <- tm_shape(streets_raeubertochter, bbox = extent_raeubertochter) +
+  tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +
+tm_shape(housing_raeubertochter, bbox = extent_raeubertochter) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = .9) +
+   tm_layout(frame = FALSE) 
+
+
+## First show segments
+p1 <-  background + tm_shape(subset_raeubertochter_seg, bbox = extent_raeubertochter) +
+  tm_symbols(size = 0.9, col = "segment_id", palette = my_palette2, alpha = 0.9, border.col = "NA", legend.col.show = FALSE) +
+   tm_layout(frame = FALSE, bg.color = "transparent") +
+tm_credits("(1)", position = c("RIGHT", "BOTTOM"), size = 1, bg.color = "white", bg.alpha = 0.6)
+
+
+## Then show start and ending points of trajectories from raeubertochter inside our extent
+first_last_points_raeubertochter <- first_last_points |> 
+  filter(messenger == "raeubertochter") |> 
+  st_intersection(extent_raeubertochter)
+
+
+p2 <- background + 
+tm_shape(subset_raeubertochter_seg, bbox = extent_raeubertochter) +
+  tm_symbols(size = 0.9, col = "segment_id", palette = my_palette2, alpha = 0.9, border.col = "NA",legend.col.show = FALSE) +
+tm_shape(first_last_points_raeubertochter, bbox = extent_raeubertochter) +
+  tm_symbols(size = 2, col = "gold", alpha = 1, border.col = "grey25", border.alpha = 0.5, legend.col.show = F) +
+  tm_layout(frame = FALSE, bg.color = "transparent") +
+  tm_credits("(1)", position = c("RIGHT", "BOTTOM"), size = 1, bg.color = "white", bg.alpha = 0.6)
+
+
+## Then show our buffer at the tunnel entry and exit
+p3 <- background +  
+tm_shape(buffer_entry, bbox = extent_raeubertochter) +
+  tm_polygons(col = "red", border.col = "red", lwd = 0.5, alpha = 0.7) +
+tm_shape(buffer_exit) +
+  tm_polygons(col = "red", border.col = "red", lwd = 0.5, alpha = 0.7)+
+tm_layout(frame = FALSE, bg.color = "transparent") +
+  tm_credits("(2)", position = c("RIGHT", "BOTTOM"), size = 1, bg.color = "white", bg.alpha = 0.6)
+
+
+## Then show overlay -> whicht starting and endpoints lay within the entry/exit buffers
+p4 <- background + 
+tm_shape(buffer_entry, bbox = extent_raeubertochter) +
+  tm_polygons(col = "red", border.col = "red", lwd = 0.5, alpha = 0.7) +
+tm_shape(buffer_exit) +
+  tm_polygons(col = "red", border.col = "red", lwd = 0.5, alpha = 0.7)+
+  tm_shape(first_last_points_raeubertochter, bbox = extent_raeubertochter) +
+   tm_symbols(size = 2, col = "gold", alpha = 1, border.col = "grey25", border.alpha = 0.5, legend.col.show = F) +
+  tm_layout(frame = FALSE, bg.color = "transparent") +
+  tm_credits("(3)", position = c("RIGHT", "BOTTOM"), size = 1, bg.color = "white", bg.alpha = 0.6)
+
+
+## then show unmerged/merged results
+## unmerged
+p5 <- background +
+  tm_shape(subset_raeubertochter_seg, bbox = extent_raeubertochter) +
+  tm_symbols(size = 0.6, col = "segment_id", palette = my_palette2, alpha = 0.7, border.col = "NA", legend.col.show = FALSE) +
+  tm_layout(frame = FALSE, bg.color = "transparent") 
+
+
+## Adapt color palette to less segments
+my_palette3 <- c("#9E0142", "#F46D43", "#FFFF66", "#3288BD",  "#5E4FA2")
+
+
+## merged
+subset_raeubertochter_cor <- raeubertochter_cor[seq(1, nrow(raeubertochter_cor), by = 2), ]
+subset_raeubertochter_cor <- st_intersection(subset_raeubertochter_cor, extent_raeubertochter)
+
+subset_raeubertochter_cor$segment_id_cor <- as.numeric(subset_raeubertochter_cor$segment_id_cor)
+subset_raeubertochter_cor$segment_id_cor <- as.factor(subset_raeubertochter_cor$segment_id_cor)
+
+
+p6 <- background + 
+tm_shape(subset_raeubertochter_cor, bbox = extent_raeubertochter) +
+  tm_symbols(size = 0.9, col = "segment_id_cor", palette = my_palette3, alpha = 0.9, border.col = "NA", legend.col.show = FALSE) +
+  tm_layout(frame = FALSE, bg.color = "transparent") +
+  tm_credits("(4)", position = c("RIGHT", "BOTTOM"), size = 1, bg.color = "white", bg.alpha = 0.6)
+
+
+## show merged segments
+#print(p6)
+
+## save to png 
+#tmap_save(p6, "raeubertochter_cor.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+
+## arrange in a 2x2 grid for our working progress
+p_arrange_tunnel_workflow <-  tmap_arrange(p2, p3, p4, p6, ncol = 2, nrow = 2)
+
+
+## print working progress
+print(p_arrange_tunnel_workflow)
+
+
+## save as png
+# tmap_save(p_arrange_tunnel_workflow, "tunnel_workflow.png", width = 500, height = 400, dpi = 250, units = "mm")
+
+
+
+```
+
+# Task 6: Creating alternative trajectories with hereR:route()
+
+```{r alternative routing}
+
+## Extract starting and endpoints from real world trajecotries
+a_to_b <- all_routes_seg_tunnel_cor |> 
+  group_by(segment_id_cor) |> 
+  slice(c(1, n())) |> 
+  ungroup()
+
+
+## quick and dirty overview
+tmap_mode("plot")
+tm_shape(a_to_b) + 
+  tm_dots(col = "gold", size = .25) +
+  tm_layout(frame = FALSE)
+
+
+## Get accsess to API from here, this API will later generate our alternative routes based on the start and endpoints of the deliveries
+library("hereR")
+set_key("PARpVmlSSQAeuGjMhIdg94LMi9s1ha4UShazq0j8sAo")
+
+
+############### ATTENTION: We get a lot of warning due to our limited access to this API. We're barely able to get 1 alternative route per delivery for 1 shift per messenger. We have access to almost 60 shifts per messenger, but can not generate an alternative for one shift per messenger, major bummer! We try to run the function (route) twice, ones for raeubertochter, ones for donner so at least for day one, all routes get an alternative
+
+## Create a dataframe with even rows -> ENDPOINTS
+df_even <- a_to_b[seq(2, nrow(a_to_b), by = 2), ]
+# df_even_raeubertochter <- filter(df_even, messenger == "raeubertochter")
+# df_even_donner <- filter(df_even, messenger == "donner")
+
+# if a single smaple is needed
+#df_even <- filter(df_even, segment_id_cor == 57)
+
+
+## Create a dataframe with odd rows -> STARTING POINTS
+df_odd <- a_to_b[seq(1, nrow(a_to_b), by = 2), ]
+# df_odd_raeubertochter <- filter(df_odd, messenger == "raeubertochter")
+# df_odd_donner <- filter(df_odd, messenger == "donner")
+
+# if a single smaple is needed
+#df_odd <- filter(df_odd, segment_id_cor == 57)
+
+alternative_lines <- route(origin = df_odd, destination = df_even, transport_mode = "bicycle", traffic = FALSE, results = 1 , routing_mode = "short")
+
+
+
+## create an alternative route for every single delivery from raeubertochter
+# alternative_lines_donner <- route(origin = df_odd_donner, destination = df_even_donner, transport_mode = "bicycle", traffic = FALSE, results = 1 , routing_mode = "short")
+# 
+# ## create an alternative route for every single delivery from raeubertochter
+# alternative_lines_raeubertochter <- route(origin = df_odd_raeubertochter, destination = df_even_raeubertochter, transport_mode = "bicycle", traffic = FALSE, results = 1 , routing_mode = "short")
+
+
+############### We still get warning because we sent too many request in a given time frame. We will compute the alternatives with a little pause in between so we can get alternatives for all routes on day one.
+
+
+## Combine datasets back together
+#alternative <- rbind(alternative_lines_donner, alternative_lines_raeubertochter)
+
+
+## Transform alternative in spatial point dataframe
+alternative <- alternative_lines |> 
+  st_transform(crs = 2056) |> 
+  st_cast("POINT") |> 
+  st_zm(drop = TRUE) |> 
+  rename(segment_id = id)
+
+
+## drop height information, well add id back later via dhm25
+alternative <- st_zm(alternative, drop = TRUE)
+
+
+
+```
+
+## Visualize Original and Alternative Trajectories
+
+```{r visualize alternative routing,  fig.height= 9, fig.width=9, fig.align='center'}
+
+#| layout-ncol: 1
+#| layout-nrow: 3
+#| fig-cap: 
+#|   - "Line Plot 1"
+#|   - "Line Plot 2"
+#|   - "Line Plot 3"
+
+## Create a new extent for this
+coords <- rbind(c(2679514  , 1249013 ), c(2683075, 1249013 ), c(2683075, 1247635), c(2679514 , 1247635), c(2679514 , 1249013 ))
+
+
+## Create a polygon
+polygon <- st_polygon(list(coords))
+
+
+## Convert to spatial object
+extent2 <- st_sfc(polygon, crs = 2056)
+
+
+## Clip spatial data to new extent to speed up computing time
+streets_alt <- st_intersection(streets, extent2)
+housing_alt <- st_intersection(housing, extent2)
+
+
+## filter one representative delivery
+donner_vis <- donner_cor |> 
+   filter(segment_id_cor == 1)
+
+
+## filter one representative alternative
+alt <- alternative_lines |> 
+  filter(id == 1)
+
+
+## filter one representative start- and endpoint
+df_odd_vis <- df_odd |> 
+  filter(segment_id_cor == 1)
+
+df_even_vis <- df_even |> 
+  filter(segment_id_cor == 1)
+
+
+## set mode to plot
+tmap_mode("plot")
+
+
+## create a new background
+background2 <- tm_shape(streets_alt, bbox = extent2) +
+ tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +  
+  tm_shape(housing_alt, bbox = extent2) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = .9) 
+
+
+## map original route
+original_route <- background2 +
+  tm_shape(donner_vis) +
+  tm_dots(col = "#9E1FA2", size = .25, alpha = 0.8) +
+ tm_layout(frame = FALSE, bg.color = "transparent", outer.margins = c(0.0, 0.0, 0.06, 0.00)) +
+    tm_credits("(3)", position = c(0.98, 0.015), size = 1, bg.color = "white", bg.alpha = 0.6)
+
+
+## print original routing
+#print(original_route)
+
+
+## combine original route with start and endpoints
+tm4 <- background2 +
+  tm_shape(donner_vis) +
+  tm_dots(col = "#9E1FA2", size = .25, alpha = 0.8) +
+  tm_shape(df_even_vis) +
+  tm_dots(col = "steelblue1", size = 2) +
+ tm_shape(df_odd_vis) +
+  tm_dots(col = "gold", size = 2) +
+ tm_layout(frame = FALSE, bg.color = "transparent", outer.margins = c(0.0, 0.0, 0.06, 0.00)) +
+    tm_credits("(1)", position = c(0.965, 0.015), size = 1, bg.color = "white", bg.alpha = 0.6)
+
+
+## print map with start and endpoints
+#print(tm4)
+
+
+## save as png
+# tmap_save(tm4, "alternative_routing1.png", width = 300, height = 125, dpi = 250, units = "mm")
+
+
+## show alternative routing generated by hereR and based on starting and endpoinnts
+tm5 <- background2 +
+ tm_shape(alt) +
+tm_lines( col = "#11E2A1", lwd = 4) +
+ tm_shape(df_even_vis) +
+  tm_dots(col = "steelblue1", size = 2) +
+ tm_shape(df_odd_vis) +
+  tm_dots(col = "gold", size = 2) +
+ tm_layout(frame = FALSE, bg.color = "transparent", outer.margins = c(0.0, 0.0, 0.06, 0.00)) +
+    tm_credits("(2)", position = c(0.965, 0.015), size = 1, bg.color = "white", bg.alpha = 0.6)
+
+
+## show map
+#print(tm5)
+
+
+## save as png
+# tmap_save(tm5, "alternative_routing2.png", width = 300, height = 125, dpi = 250, units = "mm")
+
+
+## combine everything together
+tm6 <- background2 +
+  tm_shape(donner_vis) +
+  tm_dots(col = "#9E1FA2", size = .25, alpha = 0.8) +
+  tm_shape(alt) +
+tm_lines( col = "#11E2A1", lwd = 4) +
+ tm_shape(df_even_vis) +
+  tm_dots(col = "steelblue1", size = 2) +
+ tm_shape(df_odd_vis) +
+  tm_dots(col = "gold", size = 2) +
+ tm_layout(frame = FALSE, bg.color = "transparent") +
+    tm_credits("(3)", position = c(0.965, 0.015), size = 1, bg.color = "white", bg.alpha = 0.6)
+
+
+## show combined map
+#print(tm6)
+
+
+## save as png
+# tmap_save(tm6, "alternative_routing3.png", width = 300, height = 125, dpi = 250, units = "mm")
+
+
+## arrange workflow
+parrange2 <-  tmap_arrange(tm4, tm5, tm6, ncol = 1, nrow = 3, outer.margins = c(0.0, 0.0, 0.1, 0.00))
+
+
+## print workflow 
+print(parrange2)
+
+
+## save as png
+# tmap_save(parrange2, "alternative_routing.png", width = 300, height = 375, dpi = 250, units = "mm")
+
+
+```
+
+# Task 7: Combining Trajectories and Alternatives into a singel Data Frame
+
+```{r combined dataset}
+
+## simplify original dataframe
+original <- all_routes_seg_tunnel_cor |> 
+  select(messenger, time, geometry, segment_id_cor) |> 
+  rename(segment_id = segment_id_cor) |> 
+  mutate(
+    type = as.character("original"),
+    segment_id = as.numeric(segment_id)
+    )
+
+  
+## simplify alternative datast
+alternative <- alternative |> 
+  select(segment_id, geometry) |> 
+  st_transform(crs = 2056) |> 
+  mutate(
+    type = as.character("alternative"),
+    segment_id = as.numeric(segment_id)
+    
+  )
+
+#combine the dataset
+combined <- bind_rows(original, alternative)
+
+
+# fill in missing messenger values
+combined <- combined |> 
+  arrange(segment_id, messenger) |> 
+  fill(messenger, .direction = "down")
+
+
+
+```
+
+# Filter matching segment id's
+
+```{r}
+
+## As mentioned above, we have the problem, that we only had limited access to the here API. Therefore we do not have an alternative for every single original trajectory. Before continuoing with our calculations, we need to filter the segments that each have an original route and an alternative
+
+
+## get every unique segment id from the type original
+original_ids <- combined |> 
+  filter(type == 'original') |> 
+  pull(segment_id) |> 
+  unique()
+
+
+## get every unique segment id from the type alternative
+alternative_ids <- combined |>  
+  filter(type == 'alternative') |>  
+  pull(segment_id) |> 
+  unique()
+
+
+## Find common segment_ids, how many segments are there?
+common_ids <- intersect(original_ids, alternative_ids)
+
+length(unique(common_ids))
+
+######### ATTENTION: Whenever we compute alternatives with the API from here, other alternatives are gereated and some are not. This changes with every computation!!! 
+
+## Latest computation: 50 matching segments
+
+
+## Filter the dataframe
+filtered_df <- combined |> 
+  filter(segment_id %in% common_ids)
+
+
+## how many fixes?
+filtered_df |> 
+  group_by(type, messenger) |> 
+  summarise(count = n(), 
+            count2 = n_distinct(segment_id))
+
+
+## How many fixes / deliveries are included?
+#donner original: 3161, 31
+#donner alternative: 2287, 31
+#raeubertochter original: 6076, 19
+#raeubertochter alternative: 1704, 19
+
+## total number of segments / deliveries for future calculations: 50
+
+## We have a very uneven distribution of gps fixes, a problem we'll solve later
+
+```
+
+# Task 8: Map Matching
+
+```{r map matching based on Nils method}
+
+## since we want to find the closest location on the road over ALL roads
+## we need to create a union of the roads first.
+street_network <- st_union(streets)
+
+
+# Now we can get the nearest point for each GPS location
+nearest <- st_nearest_points(filtered_df, street_network)
+
+
+# The output is a line for each point
+# Now we need convert the output from LINE to POINT. 
+# This doubles the number of features
+near_p <- st_cast(nearest, "POINT")
+
+
+# now we subset the points. Even numbers are the new, mapmatched points.
+near_to <- near_p[c(FALSE,TRUE)]
+
+
+# Update the geometry of the original points with the new map matched locations
+st_geometry(filtered_df) <- st_geometry(near_to)
+
+
+```
+
+## Visualize Map Matching
+
+Interactive visualization of map matching results
+
+```{r visualize map matching via tmap and interactive}
+
+# Noch gedanken bez. dynamischeren visualisierungen machen
+
+box = st_bbox(filtered_df)
+
+tmap_mode("view")
+tm_shape(street_network) + 
+  tm_lines() +
+tm_shape(nearest) + 
+  tm_lines(col = "darkred", lwd = 2, lty = "dashed") +
+tm_shape(filtered_df) + 
+  tm_dots(col = "type") +
+  tm_basemap(server = NULL) +
+    tm_view(bbox =  box) 
+
+```
+
+static visualization via tmap and in a smaller spatial context
+
+```{r visualize map matching via tmap and}
+
+### Next, we want to visualize a subsample of our segmented data in a smaller spatial context
+## Visualize Subsample in spatial context
+
+
+## Define the coordinates of the polygon for a new extent
+coords <- rbind(c(2682094, 1247370), c(2682094, 1247612), c(2682433, 1247612), c(2682433, 1247370), c(2682094, 1247370))
+
+
+## Create a polygon
+polygon <- st_polygon(list(coords))
+
+## Convert to spatial object
+extent4 <- st_sfc(polygon, crs = 2056)
+
+
+## clip spatial data to new extent
+housing1 <- st_intersection(housing, extent4)
+streets1 <- st_intersection(streets, extent4)
+surface1 <- st_intersection(surface, extent4)
+combined_vis <- st_intersection(filtered_df, extent4)
+
+
+## set mode
+tmap_mode("plot")
+
+
+## visualize map matching in a smaller spatial context
+map_matching <- tm_shape(streets1, bbox = extent4) + 
+   tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +
+  tm_shape(housing1, bbox = extent4) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = 0.9) +
+tm_shape(nearest) + 
+  tm_lines(lwd = 1, lty = "dashed", col = "grey") +
+tm_shape(combined_vis$geometry) + 
+  tm_dots(col = "purple", border.col = "purple", size = 0.6, alpha = .9, ) + 
+tm_shape(combined) + 
+  tm_dots(col = "lightblue", size = 0.6, alpha = .9, border.col = "lightblue",) +
+  tm_layout(frame = FALSE, bg.color = "transparent") 
+
+
+## Show map
+print(map_matching)
+
+
+## save as png
+# tmap_save(tm7, "map_matching.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+
+```
+
+# Problem: Uneven distribution of data points between original and alternative
+
+```{r uneven distribution gps fixes}
+
+
+## We encounter the problem, that our alternative routes consist of two to three times less data points as our original routes. The denser sampling intervals in our original routes could lead to uneven calculations. For example, smaller intervals could detect more differences in height/slope than the wider sampling interval in the alternative routing
+
+filtered_df |> 
+  group_by(type) |> 
+  summarise(count = n())
+
+
+## We want to visualize the problem here
+## Problematic: uneven distribution alternative and original points as shown here
+## first we filter delivery number 57 because it illustrates the problem very good
+df_lines1 <- filtered_df |> 
+  group_by(type, messenger, segment_id) |> 
+  summarise(geometry = st_combine(geometry)) |> 
+  st_cast("LINESTRING")
+
+
+## filter alternative segment 57
+df_57_lines <- df_lines1 |> 
+  filter(segment_id == 57)
+
+
+## filter original segment 57
+df_57_points <- filtered_df |> 
+  filter(segment_id == 57)
+
+
+## Define the coordinates of the new extent
+coords <- rbind(c(2683114 , 1247977), c(2683114 , 1249227), c(2683785, 1249227), c(2683785, 1247977), c(2683114 , 1247977))
+
+## Create a polygon
+polygon <- st_polygon(list(coords))
+
+## Convert to spatial object
+extent <- st_sfc(polygon, crs = 2056)
+
+## clip everything to new extent for faster computing
+housing5 <- st_intersection(housing, extent)
+streets5 <- st_intersection(streets, extent)
+surface5 <- st_intersection(surface, extent)
+
+combined_vis <- df_57_points |> 
+  st_intersection(extent)
+
+df_lines_vis <- df_57_lines |> 
+  st_intersection(extent) 
+
+
+## new colorpalette
+my_palette5 = c("#11E2A1", "#9E1FA2")
+
+
+## create a subset so only every second point is shown
+subset_data <- combined_vis[seq(1, nrow(combined_vis), by = 2), ]
+
+
+## set plotting mode
+tmap_mode("plot")
+
+
+problem <- tm_shape(streets5) +
+  tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +
+tm_shape(housing5) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = .9) +
+tm_shape(subset_data) +
+  tm_symbols(size = 0.8, col = "type", palette = my_palette5, alpha = 0.8, border.col = "grey25", border.alpha = 0.2, legend.col.show = FALSE) +
+  tm_layout(frame = FALSE) +
+   tm_credits("(1)", position = c("RIGHT", "BOTTOM"), size = 1, bg.color = "white", bg.alpha = 0.6)
+ 
+
+## show map
+print(problem)
+
+
+## save as png
+# tmap_save(problem, "problem.png", width = 100, height = 175, dpi = 250, units = "mm")
+
+```
+
+# Task 9: Interpolating Data Frame
+
+```{r Interpolating trajectories}
+
+## Because of the uneven distribution, we decided to interpolate along the original and alternative trajectories
+
+
+## simplify dataset
+filtered_df <- select(filtered_df, -time)
+
+
+## transform the combined dataset into a linestring. The interpolation will follow these linestrings later
+df_lines2 <- filtered_df |> 
+  group_by(type, messenger, segment_id) |> 
+  summarise(geometry = st_combine(geometry)) |> 
+  st_cast("LINESTRING")
+
+
+## interpolating
+## creating a function to interpolate points along lines, there are several functions for interpolation like st_line_sample, sp_sample or gInterpolate by rgeos. 
+interpolate_points <- function(geometry, dist=10) {
+  len <- st_length(geometry) # how long is the line?
+  n_points <- ceiling(len / dist) # how many points will be sampled -> tot_length / distance between points
+  st_line_sample(geometry, sample = seq(0, 1, length.out = n_points)) # sequence between 0 and 1 indicating how many points will be sampled based on the length.out = n_points which represents how many points will be sampled
+}
+
+
+# Apply the function to each LINESTRING
+# purrr::map: This is a function from the purrr package. The map function applies a function to each element of a list or vector and returns a list. Credits go to Nils ;)
+df_lines2$points <- purrr::map(df_lines2$geometry, interpolate_points)
+
+
+## Unnest the points
+df_points <- tidyr::unnest(df_lines2, points)
+
+
+## create linestring out of interpolated points for later visualizations
+df_lines_interp <- df_points |> 
+  st_drop_geometry(points)
+
+
+## remove LINEGEOMETRY
+df_points <- df_points |> 
+  st_drop_geometry(geometry)
+
+
+## cast POINTGEOMETRY
+df_sf <- st_as_sf(df_points)
+
+
+## Use st_cast to convert multipoint to single point
+df_single_points <- st_cast(df_sf, "POINT")
+
+
+## somehow have troubles with the geometries, try to solve it:
+df_single_points <- st_set_crs(df_single_points, 2056)
+df_single_points <- st_transform(df_single_points, crs = 2056)
+
+
+## how many fixes for alternative / original
+df_single_points |> 
+  group_by(type) |> 
+  summarise(count = n())
+
+
+## our interpolation generated a dataset with a even distribution between alternatives and originals routes:
+## original: 9170
+## alternative: 9187
+
+#quick overview, df_lines was generated before interpolating, as we can see, all interpolated points lay on top of our original raw data points
+
+tmap_mode("view")
+tm_shape(df_single_points) +
+  tm_dots(col = "type") +
+  tm_shape(df_lines1) +
+  tm_lines(col = "black")
+
+```
+
+# Task 8: Compare different approaches
+
+```{r comparison of raw and interpolated fixes}
+
+#| layout-ncol: 2
+#| layout-nrow: 1
+#| fig-cap: 
+#|   - "Line Plot 1"
+#|   - "Line Plot 2"
+
+
+## We want to compare the raw gps and interpolaed data
+## Define the coordinates of the polygon
+coords <- rbind(c(2683114 , 1247977), c(2683114 , 1249227), c(2683785, 1249227), c(2683785, 1247977), c(2683114 , 1247977))
+
+## Create a polygon
+polygon <- st_polygon(list(coords))
+
+
+## Convert to spatial object
+extent <- st_sfc(polygon, crs = 2056)
+
+
+## Clip to new extent
+housing5 <- st_intersection(housing, extent)
+streets5 <- st_intersection(streets, extent)
+surface5 <- st_intersection(surface, extent)
+
+
+## select RAW data
+df_57_lines <- df_lines1 |> 
+  filter(segment_id == 57)
+
+df_57_points <- filtered_df |> 
+  filter(segment_id == 57)
+
+
+## select interpolated data
+df_57_interp <- df_single_points |> 
+  filter(segment_id == 57)
+
+df_57_interp$type <- factor(df_57_interp$type, levels = c("original", "alternative"))
+
+
+## clip to new extent
+df_57_interp <- df_57_interp |> 
+  st_intersection(extent)
+
+
+## create subset so only every second point is shown
+subset_data_interp <- df_57_interp[seq(1, nrow(df_57_interp), by = 2), ]
+
+
+my_palette6 = c("#9E1FA2","#11E2A1")
+
+tmap_mode("plot")
+
+problem_solved <- tm_shape(streets5) +
+  tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +
+tm_shape(housing5) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = .9) +
+tm_shape(subset_data_interp) +
+  tm_symbols(size = 0.8, col = "type", palette = my_palette6, alpha = 0.8, border.col = "grey25", border.alpha = 0.2, legend.col.show = FALSE) +
+  tm_layout(frame = FALSE) +
+  tm_credits("(2)", position = c("RIGHT", "BOTTOM"), size = 1, bg.color = "white", bg.alpha = 0.6)
+ 
+
+## show map
+#print(problem_solved)
+
+
+## save as png
+# tmap_save(problem_solved, "problem_solved.png", width = 100, height = 175, dpi = 250, units = "mm")
+
+
+## arrange plots to compare before and after
+parrange3 <-  tmap_arrange(problem, problem_solved, ncol = 2, nrow = 1, outer.margins = c(0.0, 0.0, 0.0, 0.00))
+
+
+## show map
+print(parrange3)
+
+
+## save as png
+# tmap_save(parrange3, "problemsolving.png", width = 200, height = 175, dpi = 250, units = "mm")
+
+
+```
+
+## Visualize alternatives and originals
+
+```{r visualize original and alternatives per messenger, fig.width=12, fig.height=12}
+
+## simple overview alternatives vs originals
+df_single_points$type <- factor(df_single_points$type, levels = c("original", "alternative"))
+
+
+## split dataframe into different messengers
+raeubertochter_final <- filter(df_single_points, messenger == "raeubertochter")
+donner_final <- filter(df_single_points, messenger == "donner")
+
+
+## create own color palette
+my_palette <- colorRampPalette(brewer.pal(11, "Spectral"))
+
+
+## raeubertochter
+raeubertochter_final <- ggplot() +
+  geom_sf(data = outline, alpha = 0) +
+  geom_sf(data = raeubertochter_final, aes(color = type), size = 0.6) +
+   scale_color_manual(values = c( "#9E1FA2", "#11E2A1")) +
+  coord_sf(datum = st_crs(2056)) +
+  facet_grid(~type) +
+  labs(x = "E",
+       y = "N") +
+    theme_minimal() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "Raeubertochter")
+
+
+## Donner
+donner_final <- ggplot() +
+  geom_sf(data = outline, alpha = 0) +
+  geom_sf(data = donner_final, aes(color = type), size = 0.6) +
+   scale_color_manual(values = c( "#9E1FA2", "#11E2A1")) +
+  coord_sf(datum = st_crs(2056)) +
+  facet_grid(~type) +
+  labs(x = "E",
+       y = "N") +
+    theme_minimal() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "Donner")
+
+
+grid.arrange(raeubertochter_final, donner_final, nrow=2, ncol=1)
+
+
+```
+
+# Task 9: Enrich network
+
+```{r}
+
+## Wel work with 52 trajectories (donner: 33 / raeubertochter: 19)
+# Enrich combined dataset with street and environmental data
+
+## buffer point features to intersect them with the street network
+traj <- st_buffer(df_single_points, 0.5)
+
+
+## set crs for polygon layer
+traj <- st_set_crs(traj, 2056)
+
+
+## intersect polygon with street network
+traj_width <- st_join(traj, streets, left = TRUE, suffix = "street", join = st_intersects)
+
+
+## transfrom back to a point layer
+traj_width <-  st_centroid(traj_width, crs = 2056)
+
+
+## Fill missing width's in dataframe
+traj_width <- traj_width |> 
+  arrange(type, messenger, segment_id) |> 
+  fill(objektart, .direction = "down") |> 
+  fill(width, .direction = "down")
+
+
+## Extract height at every point using dhm25
+extracted_height <- extract(height, traj_width)
+traj_width$height <- round(extracted_height$dhm25_zh,2)
+
+
+## Extract slope at every point
+slope <- terrain(height, v = "slope", unit = "degrees", neighbors = 8)
+extracted_slope <- extract(slope, traj_width)
+traj_width$slope <- round(extracted_slope$slope,2)
+
+
+## simplify dataframe
+traj_enriched <- traj_width |> 
+  select(-objektart)
+
+
+## Calculations between a pair of points
+traj_enriched_final <- traj_enriched |> 
+  arrange(type, segment_id) |> 
+  group_by(type, segment_id) |> 
+  mutate(lead_geom = lead(points),
+         travel_dist = sqrt(round(ifelse(!is.na(lead_geom), st_distance(lead_geom, points, by_element = TRUE), 0), 1))^2,
+         dist_cumulative = cumsum(ifelse(travel_dist > 0, travel_dist, 0)), 
+         tot_segment_length = max(dist_cumulative, na.rm = T),
+         height_diff = c(0, diff(height)),
+         tot_height_up = sum(ifelse(height_diff > 0, height_diff, 0)),
+         tot_height_down = sum(ifelse(height_diff < 0, height_diff, 0)),
+         slope_calc = ifelse(travel_dist != 0, (height_diff / travel_dist)*100, 0)
+         ) 
+
+
+## Analysing result
+false <- traj_enriched_final |> 
+  filter(segment_id == 4 & type == "original", travel_dist < 4.01)
+blabla <- traj_enriched_final |> 
+  filter(segment_id == 4 & type == "original", travel_dist > 5) 
+haha <- df_lines2 |> 
+  filter(segment_id == 4 & type == "original")
+  
+tmap_mode("view")
+tm_shape(false) +
+tm_dots(col = "gold", size = 0.15)+
+tm_shape(blabla) +
+  tm_dots(col = "travel_dist") +
+  tm_shape(haha) +
+  tm_lines()
+
+
+## somehow the interpolation did not work as expected, there are some overlaying points resulting in a travel_dist of 0.. also euclid distance results in travel_dist shorter than 10m because of turning angles.. we clean the dataset as follows:
+
+# 1.) remove poits with a euclid distance of < 4.5m
+# 2.) set travel dist to 10m manually
+
+
+## Cleaning
+traj_cleaned <- traj_enriched_final |> 
+  filter(!travel_dist < 4.5) 
+
+  
+# repeat calculations
+new <- traj_cleaned |> 
+  arrange(type, segment_id) |> 
+  group_by(type, segment_id) |> 
+  mutate(lead_geom = lead(points),
+         travel_dist = sqrt(round(ifelse(!is.na(lead_geom), st_distance(lead_geom, points, by_element = TRUE), 0), 1))^2,
+         dist_cumulative = cumsum(ifelse(travel_dist > 0, travel_dist, 0)), 
+         tot_segment_length = max(dist_cumulative, na.rm = T),
+         height_diff = c(0, diff(height)),
+         tot_height_up = sum(ifelse(height_diff > 0, height_diff, 0)),
+         tot_height_down = sum(ifelse(height_diff < 0, height_diff, 0)),
+         slope_calc = ifelse(travel_dist != 0, (height_diff / travel_dist)*100, 0)
+         ) |> 
+  na.omit()
+
+
+# setting travel distance to 10m manually, travelled distance was 10m on the line, so euclidiean distance is a little usless here..
+new$travel_dist = 10
+
+  
+
+## Calculations over a moving window of 100m (travel distance, 10 points)
+## Indexing 100m segments
+new <- new |> 
+group_by(type, messenger, segment_id) |> 
+mutate(
+    index = as.integer(cumsum(travel_dist) / 100.1 + 1)
+ )
+
+
+## Transform certain columns
+new <- new |> 
+  mutate(
+    type = as.factor(type),
+    segment_id = as.factor(segment_id),
+    index = as.factor(index),
+    width = as.factor(width)
+  )
+
+
+## Height differences over first and last point of 100m segments
+new <- new |> 
+group_by(type, messenger, segment_id, index) |> 
+mutate(
+   height_diff_100 = last(height) - first(height),
+   n = n()
+    )
+ 
+
+alternative_final <- new |> 
+      filter(type == "alternative")
+    
+    
+original_final <- new |> 
+      filter(type == "original")
+
+```
+
+
+# Task 10: Results
+
+Diese Tabelle nach jedem Druchgang neu anpassen...
+
+|                           |       | original |       |       | alternative |       |       |
+|---------|---------|:--------|:--------|:--------|:--------|:--------|:--------|
+| variable                  | unit  | min      | mean  | max   | min         | mean  | max   |
+| travel distance           | \[m\] | 584      | 2222  | 4039  | 360         | 2315  | 4089  |
+| average gradient per 100m | \[%\] | -8.88    | 0.03  | 11.8  | -11.7       | 0.05  | 11.8  |
+| max. gradient per 100m    | \[%\] | \-       | 4.09  | 75.0  | \-          | 3.89  | 66.7  |
+| height up                 | \[m\] | 0.68     | 19.4  | 87.7  | 0.78        | 19.1  | 83.1  |
+| height down               | \[m\] | -0.25    | -18.9 | -67.2 | -0.39       | -19.1 | -61.9 |
+
+```{r}
+
+## Descriptive analysis - segment length
+new |> 
+  st_drop_geometry() |> 
+  group_by(type) |> 
+  summarise(Mittelwert = mean(tot_segment_length), Minimum = min(tot_segment_length), Maximum = max(tot_segment_length)
+            , Standardabweichung = sd(tot_segment_length), Bereich = (max(tot_segment_length)-min(tot_segment_length)), median(tot_segment_length))
+
+
+## Descriptive analysis - height up
+new |> 
+  st_drop_geometry() |> 
+  group_by(type) |> 
+  summarise(Mittelwert = mean(tot_height_up), Minimum = min(tot_height_up), Maximum = max(tot_height_up)
+            , Standardabweichung = sd(tot_height_up), Bereich = (max(tot_height_up)-min(tot_height_up)), median(tot_height_up))
+
+
+## Descriptive analysis - height down
+new |> 
+  st_drop_geometry() |> 
+  group_by(type) |> 
+  summarise(Mittelwert = mean(tot_height_down), Minimum = min(tot_height_down), Maximum = max(tot_height_down)
+            , Standardabweichung = sd(tot_height_down), Bereich = (max(tot_height_down)-min(tot_height_down)), median(tot_height_down))
+
+
+## summarise values over 100m subsegments
+results <- new %>%
+  group_by(type, segment_id, index) %>%
+  na.omit() |> 
+  summarise(
+    n = n(),
+     slope_down = mean(ifelse(slope_calc < 0, slope_calc, 0), na.rm = TRUE),
+     slope_up = mean(ifelse(slope_calc > 0, slope_calc, 0), na.rm = TRUE),
+     max_slope = max((slope_calc), na.rm = TRUE),
+    min_slope = min((slope_calc),na.rm = TRUE),
+    mean_slope = mean((slope_calc), na.rm = TRUE),
+     mean_slope100 = mean((height_diff_100 / (n*10))) *100
+     # Mean of 'value' column per group
+  )
+
+
+## Descriptive analysis - average and max. slopes over 100m subsegments
+results |> 
+  st_drop_geometry() |> 
+  group_by(type) |> 
+  summarise(meanMittelwert = mean(mean_slope100), meanMinimum = min(mean_slope100), meanMaximum = max(mean_slope100),
+            meanMax100 = mean(max_slope),
+            maxMax100 = max(max_slope), 
+            minMin = min(max_slope))
+
+
+
+```
+
+## Segment length
+
+```{r}
+
+
+
+## Comparison of length
+length_comp <- new |> 
+  select(type, messenger, segment_id,  tot_segment_length)
+
+
+df_spread <- length_comp |> 
+  spread(key = type, value = tot_segment_length)
+
+
+## Compare 'tot_travel' for "original" and "alternative"
+df_spread <- df_spread |> 
+  mutate(is_original_shorter = original < alternative)
+
+df_spread <- tidyr::spread(length_comp, type, tot_segment_length)
+
+df_spread <- length_comp |> 
+  group_by(type, segment_id) |> 
+  summarise(
+    tot_travel = mean(tot_segment_length)
+  )
+
+comparison <- df_spread |> 
+  group_by(segment_id) |> 
+  summarise(shorter = min(tot_travel[type == "original"]) < min(tot_travel[type == "alternative"]))
+
+shorter_count <- sum(comparison$shorter)
+
+
+## Calculate the total number of unique segment_ids
+total_segments <- nrow(comparison)
+
+
+## Calculate the percentage
+percentage <- (shorter_count / total_segments) * 100
+
+
+## alternatives and originals almost 50/50. But original mean tot_segment_length 100m shorter than alternative. Alternative routing based on shortest routes... 
+
+
+## split dataset for t.testing
+orig = df_spread |> 
+  st_drop_geometry() |> 
+  filter(type == "original")
+
+alt = df_spread |> 
+  st_drop_geometry() |> 
+  filter(type == "alternative")
+
+
+## t.testing differences in tot_segment_length
+t.test(orig$tot_travel, alt$tot_travel, paired = TRUE)
+
+
+## visualize t.test
+ggplot(df_spread, aes(x = type, y = tot_travel)) +
+  geom_boxplot() +
+   labs(x = "segment type", y = "total segment length") +
+   theme_classic() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "")
+
+
+
+
+```
+
+## width
+
+```{r}
+
+
+width_preference <- new |> 
+  group_by(type, segment_id, width) |> 
+  full_join(complete_set,  by = c("type", "segment_id", "width")) |> 
+  summarise(
+    sum = sum(travel_dist, na.rm = T)
+  ) 
+
+##Create a complete set of segment IDs and street widths, credits go to: https://stackoverflow.com/questions/73717164/create-all-combinations-of-two-variables-from-two-dataframes-while-keeping-all-o
+complete_set <- expand.grid(segment_id = unique(width_preference$segment_id), 
+                           width = as.factor(c(1,2,3,4,6,8)),
+                           type = as.factor(c("original", "alternative")))
+                           #messenger = as.factor(c("raeubertochter", "donner")))
+
+#Replace NA values with 0
+complete_df[is.na(complete_df)] <- 0
+
+
+##Left join this set with your original data frame
+complete_df <-  full_join(complete_set, width_preference, by = c("type","segment_id", "width"))
+
+
+    
+
+
+##
+width_preference <- width_preference |> 
+   group_by(type, segment_id) |>
+  mutate(
+    width = width,
+    n = n(),
+    tot = sum(sum),
+    perc = (sum / tot) * 100,
+    sum_tot = sum(perc)
+  ) 
+
+
+
+
+
+# width_preference$width <- factor(width_preference$width, levels = sort(as.numeric(levels(width_preference$width))))
+# 
+ggplot(width_preference) +
+ geom_boxplot(aes(x = width, y = sum, fill = type))
+
+
+
+ggplot(width_preference) +
+  geom_bar(aes(x = width, y = perc, fill = type), stat = "identity", position = "dodge", width = 0.75) +
+  scale_fill_manual(values = c("grey10", "grey80")) +
+  coord_flip() +
+  theme_minimal() +
+  labs(x = "street width [m]", y = "percentage [%]", fill = "Type") +
+  theme(
+    axis.title.y = element_text( margin = margin(t = 0, r = 15, b = 0, l = 0)),
+        axis.title.x = element_text( margin = margin(t = 10, r = 0, b = 0, l = 0))
+  )
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+## Abstract
+
+## Introduction
+
+@laube2011 investigate how temporal scale affects the calculation of movement parameters (speed, sinuosity and turning angle) of animal trajectories. 
+
+## Material and Methods
+
+## Results
+
+## Discussion
+
+## Appendix
+
+### Wordcount
+
+<!-- after installing the wordcountadding, remove the line "#| eval: false" -->
+
+```{r}
+#| eval: false
+wordcountaddin::word_count("index.qmd")
+```
+
