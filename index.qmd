@@ -1694,6 +1694,221 @@ original_final <- new |>
 ```
 
 
+# Task 10: Results
+
+Diese Tabelle nach jedem Druchgang neu anpassen...
+
+|                           |       | original |       |       | alternative |       |       |
+|---------|---------|:--------|:--------|:--------|:--------|:--------|:--------|
+| variable                  | unit  | min      | mean  | max   | min         | mean  | max   |
+| travel distance           | \[m\] | 584      | 2222  | 4039  | 360         | 2315  | 4089  |
+| average gradient per 100m | \[%\] | -8.88    | 0.03  | 11.8  | -11.7       | 0.05  | 11.8  |
+| max. gradient per 100m    | \[%\] | \-       | 4.09  | 75.0  | \-          | 3.89  | 66.7  |
+| height up                 | \[m\] | 0.68     | 19.4  | 87.7  | 0.78        | 19.1  | 83.1  |
+| height down               | \[m\] | -0.25    | -18.9 | -67.2 | -0.39       | -19.1 | -61.9 |
+
+```{r}
+
+## Descriptive analysis - segment length
+new |> 
+  st_drop_geometry() |> 
+  group_by(type) |> 
+  summarise(Mittelwert = mean(tot_segment_length), Minimum = min(tot_segment_length), Maximum = max(tot_segment_length)
+            , Standardabweichung = sd(tot_segment_length), Bereich = (max(tot_segment_length)-min(tot_segment_length)), median(tot_segment_length))
+
+
+## Descriptive analysis - height up
+new |> 
+  st_drop_geometry() |> 
+  group_by(type) |> 
+  summarise(Mittelwert = mean(tot_height_up), Minimum = min(tot_height_up), Maximum = max(tot_height_up)
+            , Standardabweichung = sd(tot_height_up), Bereich = (max(tot_height_up)-min(tot_height_up)), median(tot_height_up))
+
+
+## Descriptive analysis - height down
+new |> 
+  st_drop_geometry() |> 
+  group_by(type) |> 
+  summarise(Mittelwert = mean(tot_height_down), Minimum = min(tot_height_down), Maximum = max(tot_height_down)
+            , Standardabweichung = sd(tot_height_down), Bereich = (max(tot_height_down)-min(tot_height_down)), median(tot_height_down))
+
+
+## summarise values over 100m subsegments
+results <- new %>%
+  group_by(type, segment_id, index) %>%
+  na.omit() |> 
+  summarise(
+    n = n(),
+     slope_down = mean(ifelse(slope_calc < 0, slope_calc, 0), na.rm = TRUE),
+     slope_up = mean(ifelse(slope_calc > 0, slope_calc, 0), na.rm = TRUE),
+     max_slope = max((slope_calc), na.rm = TRUE),
+    min_slope = min((slope_calc),na.rm = TRUE),
+    mean_slope = mean((slope_calc), na.rm = TRUE),
+     mean_slope100 = mean((height_diff_100 / (n*10))) *100
+     # Mean of 'value' column per group
+  )
+
+
+## Descriptive analysis - average and max. slopes over 100m subsegments
+results |> 
+  st_drop_geometry() |> 
+  group_by(type) |> 
+  summarise(meanMittelwert = mean(mean_slope100), meanMinimum = min(mean_slope100), meanMaximum = max(mean_slope100),
+            meanMax100 = mean(max_slope),
+            maxMax100 = max(max_slope), 
+            minMin = min(max_slope))
+
+
+
+```
+
+## Segment length
+
+```{r}
+
+
+
+## Comparison of length
+length_comp <- new |> 
+  select(type, messenger, segment_id,  tot_segment_length)
+
+
+df_spread <- length_comp |> 
+  spread(key = type, value = tot_segment_length)
+
+
+## Compare 'tot_travel' for "original" and "alternative"
+df_spread <- df_spread |> 
+  mutate(is_original_shorter = original < alternative)
+
+df_spread <- tidyr::spread(length_comp, type, tot_segment_length)
+
+df_spread <- length_comp |> 
+  group_by(type, segment_id) |> 
+  summarise(
+    tot_travel = mean(tot_segment_length)
+  )
+
+comparison <- df_spread |> 
+  group_by(segment_id) |> 
+  summarise(shorter = min(tot_travel[type == "original"]) < min(tot_travel[type == "alternative"]))
+
+shorter_count <- sum(comparison$shorter)
+
+
+## Calculate the total number of unique segment_ids
+total_segments <- nrow(comparison)
+
+
+## Calculate the percentage
+percentage <- (shorter_count / total_segments) * 100
+
+
+## alternatives and originals almost 50/50. But original mean tot_segment_length 100m shorter than alternative. Alternative routing based on shortest routes... 
+
+
+## split dataset for t.testing
+orig = df_spread |> 
+  st_drop_geometry() |> 
+  filter(type == "original")
+
+alt = df_spread |> 
+  st_drop_geometry() |> 
+  filter(type == "alternative")
+
+
+## t.testing differences in tot_segment_length
+t.test(orig$tot_travel, alt$tot_travel, paired = TRUE)
+
+
+## visualize t.test
+ggplot(df_spread, aes(x = type, y = tot_travel)) +
+  geom_boxplot() +
+   labs(x = "segment type", y = "total segment length") +
+   theme_classic() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "")
+
+
+
+
+```
+
+## width
+
+```{r}
+
+
+width_preference <- new |> 
+  group_by(type, segment_id, width) |> 
+  full_join(complete_set,  by = c("type", "segment_id", "width")) |> 
+  summarise(
+    sum = sum(travel_dist, na.rm = T)
+  ) 
+
+##Create a complete set of segment IDs and street widths, credits go to: https://stackoverflow.com/questions/73717164/create-all-combinations-of-two-variables-from-two-dataframes-while-keeping-all-o
+complete_set <- expand.grid(segment_id = unique(width_preference$segment_id), 
+                           width = as.factor(c(1,2,3,4,6,8)),
+                           type = as.factor(c("original", "alternative")))
+                           #messenger = as.factor(c("raeubertochter", "donner")))
+
+#Replace NA values with 0
+complete_df[is.na(complete_df)] <- 0
+
+
+##Left join this set with your original data frame
+complete_df <-  full_join(complete_set, width_preference, by = c("type","segment_id", "width"))
+
+
+    
+
+
+##
+width_preference <- width_preference |> 
+   group_by(type, segment_id) |>
+  mutate(
+    width = width,
+    n = n(),
+    tot = sum(sum),
+    perc = (sum / tot) * 100,
+    sum_tot = sum(perc)
+  ) 
+
+
+
+
+
+# width_preference$width <- factor(width_preference$width, levels = sort(as.numeric(levels(width_preference$width))))
+# 
+ggplot(width_preference) +
+ geom_boxplot(aes(x = width, y = sum, fill = type))
+
+
+
+ggplot(width_preference) +
+  geom_bar(aes(x = width, y = perc, fill = type), stat = "identity", position = "dodge", width = 0.75) +
+  scale_fill_manual(values = c("grey10", "grey80")) +
+  coord_flip() +
+  theme_minimal() +
+  labs(x = "street width [m]", y = "percentage [%]", fill = "Type") +
+  theme(
+    axis.title.y = element_text( margin = margin(t = 0, r = 15, b = 0, l = 0)),
+        axis.title.x = element_text( margin = margin(t = 10, r = 0, b = 0, l = 0))
+  )
+
+
+
+
+
+```
+
+
+
+
+
+
 
 
 ## Abstract
