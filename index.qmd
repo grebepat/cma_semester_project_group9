@@ -395,12 +395,12 @@ all_routes <- all_routes |>
 ## How do the time difference differ between messengers?
 all_routes |> 
   group_by(id) |> 
-  filter(time_difference <= 30) |> # remove outliers to get a clearer view on the average sampling intervall
+  filter(time_difference <= 30) |> # remove outliers to get a clearer view on the average sampling interval
   summarise(
     mean <- mean(time_difference, na.rm = T)
     )
 
-## Both with similair time difference between fixes, raeubertochter with slightly shorter intervalls
+## Both with similar time difference between fixes, raeubertochter with slightly shorter intervals
 
 
 ## max value between two fixes, in min
@@ -410,7 +410,7 @@ max(all_routes$time_difference, na.rm = T) / 60
 
 ```
 
-Visualize sampling intervall
+Visualize sampling interval
 
 ```{r visualize sampling intervals via ggplot}
 
@@ -648,11 +648,11 @@ tm_shape(raw_data) +
 
 ```{r tackling tunnel gps blackouts}
 
-## problem: we loose gps signal in the bicycle tunnel from enge to sihlhölzli. Our segmentation splits the trajectories into two separate deliveries, even though it's the same route. We try to recognize split segments that we're falsely segmented:
+## problem: we loose GPS signal in the bicycle tunnel from Enge to Sihlhölzli. Our segmentation splits the trajectories into two separate deliveries, even though it's the same route. We try to recognize split segments that we're falsely segmented:
 all_routes_seg_tunnel <- all_routes_seg
 
 
-## extraxt first and last points of each segment
+## extract first and last points of each segment
 first_last_points <- all_routes_seg_tunnel |> 
   group_by(segment_id) |> 
   slice(c(1, n())) |> 
@@ -703,7 +703,7 @@ lookup_table <- matched_segments |>
   distinct() # replace duplicates
 
 
-## We recognized one falsely seperated trajecotry. Segment 49 and 50 we're seperated but should be kept together
+## We recognized one falsely separated trajecotry. Segment 49 and 50 we're separated but should be kept together
 
 
 ## In this case, we could merge the segments back together manually. but with larger dataset, this might not be feasible. That's why we try a more general approach:
@@ -763,7 +763,7 @@ Visualize automated workflow for troubling tunnel problems
 #|   - "Line Plot 3"
 #|   - "Line Plot 4"
 
-### we want to visualize the correction progress from the original segmentation to the corrected version including our tunnel probelm
+### we want to visualize the correction progress from the original segmentation to the corrected version including our tunnel problem
 
 tmap_mode("plot")
 
@@ -1544,7 +1544,7 @@ grid.arrange(raeubertochter_final, donner_final, nrow=2, ncol=1)
 
 ```{r}
 
-## Wel work with 52 trajectories (donner: 33 / raeubertochter: 19)
+## We work with 52 trajectories (donner: 33 / raeubertochter: 19)
 # Enrich combined dataset with street and environmental data
 
 ## buffer point features to intersect them with the street network
