@@ -336,10 +336,9 @@ tm_shape(raw_data) +
 
 raw_data |> 
   st_transform(crs = 4326) |>
-
 leaflet() |>
     addCircleMarkers(opacity = 0.5,
-                     color = "red",
+                     color = "green",
                      radius = 2) |> 
     addProviderTiles(providers$Stadia.StamenToner, options = tileOptions(opacity = 0.75)) |> 
   addScaleBar(position = "bottomleft", scaleBarOptions(imperial = FALSE))

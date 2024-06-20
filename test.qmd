@@ -212,7 +212,7 @@ height <- terra::rast("gis_files/dhm25_zh.tif")
 
 Visualize raw GPS data of both messengers using a simple ggplot.
 
-```{r visualize raw data via ggplot, out.width=100%, dpi=300}
+```{r visualize raw data via ggplot, out.width=100, dpi=300}
 
 #| layout-ncol: 2
 #| fig-cap: 
@@ -257,7 +257,7 @@ grid.arrange(p_raw_raeubertochter,p_raw_donner, nrow=1, ncol=2)
 
 Subsample of raw data in a smaller spatial context
 
-```{r visualize raw data via tmap and spatial context, out.width=100%, dpi=500}
+```{r visualize raw data via tmap and spatial context, out.width=100, dpi=300}
 
 #| fig-cap: 
 #|   - "Line Plot 1"
