@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx creator="StravaGPX" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+ <metadata>
+  <time>2021-12-04T15:42:52Z</time>
+ </metadata>
+ <trk>
+  <name>Afternoon Run</name>
+  <type>running</type>
+  <trkseg>
+   <trkpt lat="46.9624620" lon="7.4514850">
+    <ele>557.8</ele>
+    <time>2021-12-04T15:42:52Z</time>
+   </trkpt>
+   <trkpt lat="46.9625330" lon="7.4514850">
+    <ele>557.8</ele>
+    <time>2021-12-04T15:42:53Z</time>
+   </trkpt>
+   <trkpt lat="46.9625320" lon="7.4515130">
+    <ele>557.8</ele>
+    <time>2021-12-04T15:42:54Z</time>
+   </trkpt>
+   <trkpt lat="46.9625100" lon="7.4515860">
+    <ele>557.8</ele>
+    <time>2021-12-04T15:42:56Z</time>
+   </trkpt>
+   <trkpt lat="46.9625000" lon="7.4515720">
+    <ele>557.9</ele>
+    <time>2021-12-04T15:42:57Z</time>
+   </trkpt>
+   <trkpt lat="46.9625030" lon="7.4515630">
+    <ele>557.9</ele>
+    <time>2021-12-04T15:42:58Z</time>
+   </trkpt>
+   <trkpt lat="46.9625730" lon="7.4514980">
+    <ele>557.9</ele>
+    <time>2021-12-04T15:43:00Z</time>
+   </trkpt>
+   <trkpt lat="46.9625670" lon="7.4515020">
+    <ele>557.9</ele>
+    <time>2021-12-04T15:43:01Z</time>
+   </trkpt>
+   <trkpt lat="46.9625610" lon="7.4515060">
+    <ele>557.9</ele>
+    <time>2021-12-04T15:43:02Z</time>
+   </trkpt>
+  </trkseg>
+ </trk>
+</gpx>

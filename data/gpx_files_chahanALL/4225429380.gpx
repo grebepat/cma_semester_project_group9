@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx creator="StravaGPX" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+ <metadata>
+  <time>2020-10-21T18:02:56Z</time>
+ </metadata>
+ <trk>
+  <name>Fahrt am Abend</name>
+  <type>cycling</type>
+  <trkseg>
+   <trkpt lat="46.9347950" lon="7.4240960">
+    <ele>564.9</ele>
+    <time>2020-10-21T18:02:56Z</time>
+   </trkpt>
+   <trkpt lat="46.9348730" lon="7.4241340">
+    <ele>564.9</ele>
+    <time>2020-10-21T18:02:57Z</time>
+   </trkpt>
+   <trkpt lat="46.9348850" lon="7.4241350">
+    <ele>564.9</ele>
+    <time>2020-10-21T18:02:58Z</time>
+   </trkpt>
+   <trkpt lat="46.9348970" lon="7.4241460">
+    <ele>564.9</ele>
+    <time>2020-10-21T18:02:59Z</time>
+   </trkpt>
+   <trkpt lat="46.9349440" lon="7.4242540">
+    <ele>564.9</ele>
+    <time>2020-10-21T18:03:00Z</time>
+   </trkpt>
+   <trkpt lat="46.9349790" lon="7.4242760">
+    <ele>564.9</ele>
+    <time>2020-10-21T18:03:01Z</time>
+   </trkpt>
+   <trkpt lat="46.9350010" lon="7.4242950">
+    <ele>564.9</ele>
+    <time>2020-10-21T18:03:02Z</time>
+   </trkpt>
+   <trkpt lat="46.9350600" lon="7.4243200">
+    <ele>564.9</ele>
+    <time>2020-10-21T18:03:03Z</time>
+   </trkpt>
+   <trkpt lat="46.9350660" lon="7.4243760">
+    <ele>565.0</ele>
+    <time>2020-10-21T18:03:04Z</time>
+   </trkpt>
+   <trkpt lat="46.9350890" lon="7.4244150">
+    <ele>565.0</ele>
+    <time>2020-10-21T18:03:05Z</time>
+   </trkpt>
+   <trkpt lat="46.9351180" lon="7.4244570">
+    <ele>565.0</ele>
+    <time>2020-10-21T18:03:06Z</time>
+   </trkpt>
+   <trkpt lat="46.9351590" lon="7.4244770">
+    <ele>565.1</ele>
+    <time>2020-10-21T18:03:07Z</time>
+   </trkpt>
+   <trkpt lat="46.9351870" lon="7.4245080">
+    <ele>565.1</ele>
+    <time>2020-10-21T18:03:08Z</time>
+   </trkpt>
+  </trkseg>
+ </trk>
+</gpx>
