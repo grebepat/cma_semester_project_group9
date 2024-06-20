@@ -333,6 +333,18 @@ tm_shape(raw_data) +
   tm_facets(by = "messenger", sync = TRUE, ncol = 2)
 
 
+
+raw_data |> 
+  st_transform(crs = 4326) |>
+
+leaflet() |>
+    addCircleMarkers(opacity = 0.5,
+                     color = "red",
+                     radius = 2) |> 
+    addProviderTiles(providers$Stadia.StamenToner, options = tileOptions(opacity = 0.75)) |> 
+  addScaleBar(position = "bottomleft", scaleBarOptions(imperial = FALSE))
+
+
 ```
 
 # Task 3: Signal Sync: Assessing Sampling Intervals Across Messenger GPS Systems
