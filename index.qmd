@@ -90,6 +90,7 @@ library("hereR")
 library("png")
 library("gridExtra")
 library("RColorBrewer")
+library("purrr")
 
 
 ```
@@ -231,7 +232,8 @@ p_raw_raeubertochter <- ggplot() +
        y = "N") +
     theme_minimal() +
   theme(
-    legend.position = "none"
+    legend.position = "none",
+    axis.text.x = element_text(angle = 90)
   ) +
   labs(title = "Raeubertochter")
 
@@ -245,7 +247,8 @@ p_raw_donner <- ggplot() +
        y = "N") +
   theme_minimal() +
   theme(
-    legend.position = "none"
+    legend.position = "none",
+     axis.text.x = element_text(angle = 90)
   ) +
   labs(title = "Donner")
 
@@ -285,9 +288,16 @@ extent_raeubertochter <- st_sfc(polygon, crs = 2056)
 
 ## clip spatial data to extent to reduce data points and speed up computing
 housing_raeubertochter <- st_intersection(housing, extent_raeubertochter)
+
+# housing_raeubertochter <- housing_raeubertochter |> 
+#   group_by(objektart) |> 
+#   summarise(geometry = st_union(geom)) |> 
+#   ungroup()
+
 streets_raeubertochter <- st_intersection(streets, extent_raeubertochter)
 surface_raeubertochter <- st_intersection(surface, extent_raeubertochter)
 raeubertochter_ext <- st_intersection(raeubertochter_raw, extent_raeubertochter)
+
 
 
 ## Reduce data set to every second gps fix to get a better overview
@@ -315,6 +325,17 @@ print(tm_raw_context)
 
 ```
 
+![](raeubertochter_raw.png)
+
+
+
+```{r}
+
+
+
+
+```
+
 Visualize raw data via interactive map
 
 ```{r visualize raw data via interactive map}
@@ -333,15 +354,24 @@ tm_shape(raw_data) +
   tm_facets(by = "messenger", sync = TRUE, ncol = 2)
 
 
+######################################### LEAFLET #################################
 
 raw_data |> 
   st_transform(crs = 4326) |>
 leaflet() |>
     addCircleMarkers(opacity = 0.5,
-                     color = "green",
-                     radius = 2) |> 
-    addProviderTiles(providers$Stadia.StamenToner, options = tileOptions(opacity = 0.75)) |> 
-  addScaleBar(position = "bottomleft", scaleBarOptions(imperial = FALSE))
+                     color = ~pal(messenger),
+                     radius = 2,
+                     label = ~as.character(messenger),
+                     group = ~messenger) |> 
+    addProviderTiles(providers$CartoDB.PositronNoLabels, options = tileOptions(opacity = 0.75))  |> 
+  addScaleBar(position = "bottomleft", scaleBarOptions(imperial = FALSE)) |> 
+  addLegend(position = 'topright',
+            pal = pal,
+            values = ~messenger,
+            title = "bike messengers")  |> 
+  addLayersControl(~messenger, ) 
+  
 
 
 ```
@@ -704,6 +734,9 @@ all_routes_seg_tunnel_cor |>
   summarise(length(unique(segment_id_cor)))
 
 
+save(all_routes_seg_tunnel_cor, file = "all_routes_seg_tunnel_cor.rda")
+
+
 ## donner with 36 deliveries
 ## raeubertochter with 21 deliveries
 
@@ -839,73 +872,9 @@ print(p_arrange_tunnel_workflow)
 
 ```{r alternative routing}
 
-## Extract starting and endpoints from real world trajecotries
-a_to_b <- all_routes_seg_tunnel_cor |> 
-  group_by(segment_id_cor) |> 
-  slice(c(1, n())) |> 
-  ungroup()
+# load alternatives
 
-
-## quick and dirty overview
-tmap_mode("plot")
-tm_shape(a_to_b) + 
-  tm_dots(col = "gold", size = .25) +
-  tm_layout(frame = FALSE)
-
-
-## Get accsess to API from here, this API will later generate our alternative routes based on the start and endpoints of the deliveries
-library("hereR")
-set_key("PARpVmlSSQAeuGjMhIdg94LMi9s1ha4UShazq0j8sAo")
-
-
-############### ATTENTION: We get a lot of warning due to our limited access to this API. We're barely able to get 1 alternative route per delivery for 1 shift per messenger. We have access to almost 60 shifts per messenger, but can not generate an alternative for one shift per messenger, major bummer! We try to run the function (route) twice, ones for raeubertochter, ones for donner so at least for day one, all routes get an alternative
-
-## Create a dataframe with even rows -> ENDPOINTS
-df_even <- a_to_b[seq(2, nrow(a_to_b), by = 2), ]
-# df_even_raeubertochter <- filter(df_even, messenger == "raeubertochter")
-# df_even_donner <- filter(df_even, messenger == "donner")
-
-# if a single smaple is needed
-#df_even <- filter(df_even, segment_id_cor == 57)
-
-
-## Create a dataframe with odd rows -> STARTING POINTS
-df_odd <- a_to_b[seq(1, nrow(a_to_b), by = 2), ]
-# df_odd_raeubertochter <- filter(df_odd, messenger == "raeubertochter")
-# df_odd_donner <- filter(df_odd, messenger == "donner")
-
-# if a single smaple is needed
-#df_odd <- filter(df_odd, segment_id_cor == 57)
-
-alternative_lines <- route(origin = df_odd, destination = df_even, transport_mode = "bicycle", traffic = FALSE, results = 1 , routing_mode = "short")
-
-
-
-## create an alternative route for every single delivery from raeubertochter
-# alternative_lines_donner <- route(origin = df_odd_donner, destination = df_even_donner, transport_mode = "bicycle", traffic = FALSE, results = 1 , routing_mode = "short")
-# 
-# ## create an alternative route for every single delivery from raeubertochter
-# alternative_lines_raeubertochter <- route(origin = df_odd_raeubertochter, destination = df_even_raeubertochter, transport_mode = "bicycle", traffic = FALSE, results = 1 , routing_mode = "short")
-
-
-############### We still get warning because we sent too many request in a given time frame. We will compute the alternatives with a little pause in between so we can get alternatives for all routes on day one.
-
-
-## Combine datasets back together
-#alternative <- rbind(alternative_lines_donner, alternative_lines_raeubertochter)
-
-
-## Transform alternative in spatial point dataframe
-alternative <- alternative_lines |> 
-  st_transform(crs = 2056) |> 
-  st_cast("POINT") |> 
-  st_zm(drop = TRUE) |> 
-  rename(segment_id = id)
-
-
-## drop height information, well add id back later via dhm25
-alternative <- st_zm(alternative, drop = TRUE)
-
+load("C:/Users/patri/Desktop/Semesterproject/semesterproject/alternative.rda")
 
 
 ```
@@ -1071,7 +1040,7 @@ original <- all_routes_seg_tunnel_cor |>
   
 ## simplify alternative datast
 alternative <- alternative |> 
-  select(segment_id, geometry) |> 
+  select(segment_id, rank,  geometry) |> 
   st_transform(crs = 2056) |> 
   mutate(
     type = as.character("alternative"),
@@ -1086,6 +1055,8 @@ combined <- bind_rows(original, alternative)
 combined <- combined |> 
   arrange(segment_id, messenger) |> 
   fill(messenger, .direction = "down")
+
+combined$rank[is.na(combined$rank)] <- 0
 
 
 
@@ -1128,21 +1099,34 @@ filtered_df <- combined |>
 
 
 ## how many fixes?
-filtered_df |> 
-  group_by(type, messenger) |> 
+overview <- filtered_df |> 
+  st_drop_geometry() |> 
+  group_by(type, messenger, segment_id, rank) |> 
   summarise(count = n(), 
-            count2 = n_distinct(segment_id))
+            count2 = n_distinct(segment_id)) |> 
+  mutate(
+    type = as.factor(type),
+    count = as.numeric(count)
+  ) |> 
+  na.omit()
 
 
-## How many fixes / deliveries are included?
-#donner original: 3161, 31
-#donner alternative: 2287, 31
-#raeubertochter original: 6076, 19
-#raeubertochter alternative: 1704, 19
+overview <- overview |> 
+  group_by(type) |> 
+  arrange(type) |> 
+  select(type, messenger, count, rank) |> 
+  as.data.frame()
 
-## total number of segments / deliveries for future calculations: 50
+overview |> 
+  group_by(type, rank) |> 
+  summarise(
+    mean = mean(count)
+  )
 
-## We have a very uneven distribution of gps fixes, a problem we'll solve later
+ggplot(df) +
+  geom_boxplot(aes(x = type, y = count))
+
+# We have a very uneven distribution of gps fixes, a problem we'll solve later
 
 ```
 
@@ -1853,7 +1837,6 @@ ggplot(df_spread, aes(x = type, y = tot_travel)) +
 
 width_preference <- new |> 
   group_by(type, segment_id, width) |> 
-  full_join(complete_set,  by = c("type", "segment_id", "width")) |> 
   summarise(
     sum = sum(travel_dist, na.rm = T)
   ) 
@@ -1864,19 +1847,20 @@ complete_set <- expand.grid(segment_id = unique(width_preference$segment_id),
                            type = as.factor(c("original", "alternative")))
                            #messenger = as.factor(c("raeubertochter", "donner")))
 
-#Replace NA values with 0
-complete_df[is.na(complete_df)] <- 0
 
 
 ##Left join this set with your original data frame
 complete_df <-  full_join(complete_set, width_preference, by = c("type","segment_id", "width"))
 
 
+#Replace NA values with 0
+complete_df[is.na(complete_df)] <- 0
+
     
 
 
 ##
-width_preference <- width_preference |> 
+width_preference <- complete_df |> 
    group_by(type, segment_id) |>
   mutate(
     width = width,
@@ -1890,7 +1874,7 @@ width_preference <- width_preference |>
 
 
 
-# width_preference$width <- factor(width_preference$width, levels = sort(as.numeric(levels(width_preference$width))))
+# Preference$width <- factor(width_preference$width, levels = sort(as.numeric(levels(width_preference$width))))
 # 
 ggplot(width_preference) +
  geom_boxplot(aes(x = width, y = sum, fill = type))
