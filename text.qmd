@@ -55,14 +55,8 @@ To solve this, we interpolated along the trajectories. We simplified the dataset
 
 ## Descriptive Analysis
 
-  
-
 ## Results
-
-
 
 ## Discussion
 
 ### Limitations in generating alternative trajectories
-
-
