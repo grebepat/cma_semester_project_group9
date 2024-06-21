@@ -27,7 +27,6 @@ Route choice models play an important role in many transport applications, for e
 
 We utilized GPS data collected with the fitness-tracking-app Strava. The data was collected by two bike messengers in Zurich and conducted as GPX files. The two messengers have been assigned aliases for the purpose of this analysis. They are referred to as "donner" and "raeubertochter" The data encompasses 95 shifts, with each shift including multiple trajectories/deliveries. The raw data contains a total number of xyz data points. The shifts vary in terms of distance traveled, working hours, season, weather and the number of deliveries.
 
-
 ### Street Data
 
 All contextual data for enriching the route network is sourced from open-source platforms. We used the following datasets for our street data analysis:
@@ -61,4 +60,3 @@ To solve this, we interpolated along the trajectories. We simplified the dataset
 ## Discussion
 
 ### Limitations in generating alternative trajectories
-

@@ -145,15 +145,15 @@ single_routes <- purrr::map(file, process_file)
 
 ## Combine all results
 all_routes <- do.call(rbind, single_routes)
-save(all_routes, file = "all_routes.rda")
+save(all_routes, file = "rda_files/all_routes.rda")
 
 
 ## Seperate file into raeubertochter and donner and save output for visualizations under preprocessing.qmd
 raeubertochter_raw <- filter(all_routes, messenger == "raeubertochter")
-save(raeubertochter_raw, file = "raeubertochter_raw.rda")
+save(raeubertochter_raw, file = "rda_files/raeubertochter_raw.rda")
 
 donner_raw <- filter(all_routes, messenger == "donner")
-save(donner_raw, file = "donner_raw.rda")
+save(donner_raw, file = "rda_files/donner_raw.rda")
 
 
 ## Our raw data covers one shift per messenger, a total of 11'699 fixes were recorded:
@@ -163,7 +163,7 @@ save(donner_raw, file = "donner_raw.rda")
 ```
 
 ::: {#fig-raw_data layout-ncol="2"}
-![Räubertochter](raeubertochter_raw.png) ![Donner](donner_raw.png)
+![Räubertochter](figures/raeubertochter_raw.png) ![Donner](figures/donner_raw.png)
 
 RAW DATA
 :::
@@ -346,7 +346,7 @@ all_routes_seg <- all_routes_seg |>
   ungroup() |> 
   select(-temp_id)
 
-save(all_routes_seg, file = "all_routes_seg.rda")
+save(all_routes_seg, file = "rda_files/all_routes_seg.rda")
 
 
 ## how many segments have been differentiated?
@@ -360,10 +360,10 @@ all_routes_seg |>
 
 ## filter segments according to messenger
 raeubertochter_seg <- filter(all_routes_seg, messenger == "raeubertochter")
-save(raeubertochter_seg, file = "raeubertochter_seg.rda")
+save(raeubertochter_seg, file = "rda_files/raeubertochter_seg.rda")
 
 donner_seg <- filter(all_routes_seg, messenger == "donner")
-save(donner_seg, file = "donner_seg.rda")
+save(donner_seg, file = "rda_files/donner_seg.rda")
 
 
 ```
@@ -458,7 +458,7 @@ all_routes_seg_tunnel_cor |>
   summarise(length(unique(segment_id_cor)))
 
 
-save(all_routes_seg_tunnel_cor, file = "all_routes_seg_tunnel_cor.rda")
+save(all_routes_seg_tunnel_cor, file = "rda_files/all_routes_seg_tunnel_cor.rda")
 
 
 ## donner with 36 deliveries
@@ -467,12 +467,12 @@ save(all_routes_seg_tunnel_cor, file = "all_routes_seg_tunnel_cor.rda")
 
 ## seperate into raeubertochter and save for later visualization in preprocessing.qmd
 raeubertochter_cor <- filter(all_routes_seg_tunnel_cor, messenger == "raeubertochter")
-save(raeubertochter_cor, file = "raeubertochter_cor.rda")
+save(raeubertochter_cor, file = "rda_files/raeubertochter_cor.rda")
 
 
 ## and donner
 donner_cor <- filter(all_routes_seg_tunnel_cor, messenger == "donner")
-save(donner_cor, file = "donner_cor.rda")
+save(donner_cor, file = "rda_files/donner_cor.rda")
 
 ```
 
@@ -484,7 +484,7 @@ save(donner_cor, file = "donner_cor.rda")
 ## Alternatives were created in prepocessing.qmd, a file calles alternative.rda is stored in the global environment
 # load alternatives
 
-load("C:/Users/patri/Desktop/Semesterproject/semesterproject/alternative.rda")
+load("rda_files/alternative.rda")
 
 
 ```
@@ -510,7 +510,8 @@ alternative <- alternative |>
   st_transform(crs = 2056) |> 
   mutate(
     type = as.character("alternative"),
-    segment_id = as.numeric(segment_id)
+    segment_id = as.numeric(segment_id),
+    rank = as.numeric(rank)
   )
 
 #combine the dataset
@@ -526,7 +527,7 @@ combined$rank[is.na(combined$rank)] <- 0
 
 
 ## Save combined dataset for visualizations in preprocessing.qmd
-save(combined, file = "combined.rda")
+save(combined, file = "rda_files/combined.rda")
 
 ```
 
@@ -581,7 +582,7 @@ street_network <- st_union(streets)
 
 # Now we can get the nearest point for each GPS location
 nearest <- st_nearest_points(filtered_df, street_network)
-save(nearest, file = "nearest.rda")
+save(nearest, file = "rda_files/nearest.rda")
 
 # The output is a line for each point
 # Now we need convert the output from LINE to POINT. 
@@ -597,7 +598,7 @@ near_to <- near_p[c(FALSE,TRUE)]
 st_geometry(filtered_df) <- st_geometry(near_to)
 
 
-save(filtered_df, file = "filtered_df.rda")
+save(filtered_df, file = "rda_files/filtered_df.rda")
 
 ```
 
@@ -634,7 +635,7 @@ overview |>
     mean = mean(count)
   )
 
-ggplot(df) +
+ggplot(overview) +
   geom_boxplot(aes(x = type, y = count))
 
 
@@ -699,7 +700,7 @@ df_single_points <- st_set_crs(df_single_points, 2056)
 df_single_points <- st_transform(df_single_points, crs = 2056)
 
 
-save(df_single_points, file = "df_single_points.rda")
+save(df_single_points, file = "rda_files/df_single_points.rda")
 
 ## how many fixes for alternative / original?
 
@@ -803,8 +804,8 @@ traj_cleaned <- traj_enriched_final |>
   
 # repeat calculations
 new <- traj_cleaned |> 
-  arrange(type, segment_id, rank) |> 
-  group_by(type, segment_id, rank) |> 
+  arrange(type, messenger, segment_id, rank) |> 
+  group_by(type, messenger, segment_id, rank) |> 
   mutate(lead_geom = lead(points),
          travel_dist = sqrt(round(ifelse(!is.na(lead_geom), st_distance(lead_geom, points, by_element = TRUE), 0), 1))^2,
          dist_cumulative = cumsum(ifelse(travel_dist > 0, travel_dist, 0)), 
@@ -813,8 +814,7 @@ new <- traj_cleaned |>
          tot_height_up = sum(ifelse(height_diff > 0, height_diff, 0)),
          tot_height_down = sum(ifelse(height_diff < 0, height_diff, 0)),
          slope_calc = ifelse(travel_dist != 0, (height_diff / travel_dist)*100, 0)
-         ) |> 
-  na.omit()
+         )
 
 
 # setting travel distance to 10m manually, traveled distance was 10m on the line, so euclidiean distance is a little useless here..
@@ -933,27 +933,20 @@ results |>
 ```{r}
 
 
-
 ## Comparison of length
 length_comp <- new |> 
   select(type, messenger, segment_id, rank,  tot_segment_length)
 
 
 df_spread <- length_comp |> 
-  spread(key = type, value = tot_segment_length)
-
-
-## Compare 'tot_travel' for "original" and "alternative"
-df_spread <- df_spread |> 
-  mutate(is_original_shorter = original < alternative)
-
-df_spread <- tidyr::spread(length_comp, type, tot_segment_length)
-
-df_spread <- length_comp |> 
   group_by(type, segment_id, rank) |> 
   summarise(
     tot_travel = mean(tot_segment_length)
+  ) |> 
+  mutate(
+    rank = factor(rank, levels = c(0,1,2,3,4,5,6,7))
   )
+
 
 comparison <- df_spread |> 
   group_by(segment_id) |> 
@@ -973,12 +966,14 @@ percentage <- (shorter_count / total_segments) * 100
 ## alternatives and originals almost 50/50. But original mean tot_segment_length 100m shorter than alternative. Alternative routing based on shortest routes... 
 
 
+?scale_fill_manual()
 
 
 ## visualize t.test
-ggplot(df_spread, aes(x = rank, y = tot_travel)) +
+ggplot(df_spread, aes(x = rank, y = tot_travel, fill = type, alpha = 0.75)) +
   geom_boxplot() +
    labs(x = "segment type", y = "total segment length") +
+  scale_fill_manual(values = c("#11E2A1","#9E1FA2")) +
    theme_classic() +
   theme(
     legend.position = "none"
@@ -1020,7 +1015,6 @@ complete_df <-  full_join(complete_set, width_preference, by = c("type","segment
 #Replace NA values with 0
 complete_df[is.na(complete_df)] <- 0
 
-    
 
 
 ##
@@ -1036,8 +1030,6 @@ width_preference <- complete_df |>
 
 
 
-
-
 # Preference$width <- factor(width_preference$width, levels = sort(as.numeric(levels(width_preference$width))))
 # 
 ggplot(width_preference) +
@@ -1046,8 +1038,8 @@ ggplot(width_preference) +
 
 
 ggplot(width_preference) +
-  geom_bar(aes(x = width, y = perc, fill = type), stat = "identity", position = "dodge", width = 0.75) +
-  scale_fill_manual(values = c("grey10", "grey80")) +
+  geom_bar(aes(x = width, y = perc, fill = type), stat = "identity", position = "dodge", width = 0.75, alpha = 0.5) +
+  scale_fill_manual(values = c("#11E2A1","#9E1FA2")) +
   coord_flip() +
   theme_minimal() +
   labs(x = "street width [m]", y = "percentage [%]", fill = "Type") +
@@ -1058,7 +1050,7 @@ ggplot(width_preference) +
 
 
 
-
+?geom_bar
 
 ```
 
