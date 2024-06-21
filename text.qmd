@@ -25,7 +25,7 @@ Route choice models play an important role in many transport applications, for e
 
 ### GPS Data
 
-We utilized GPS data collected with the fitness-tracking-app Strava. The data was collected by two bike messengers in Zurich and conducted as GPX files. The two messengers have been assigned aliases for the purpose of this analysis. They are referred to as “donner” and “raeubertochter  The data encompasses approximately 95 shifts, with each shift including multiple trajectories/deliveries. The shifts vary in terms of distance traveled, working hours, and the number of deliveries.
+We utilized GPS data collected with the fitness-tracking-app Strava. The data was collected by two bike messengers in Zurich and conducted as GPX files. The two messengers have been assigned aliases for the purpose of this analysis. They are referred to as “donner” and “raeubertochter The data encompasses approximately 95 shifts, with each shift including multiple trajectories/deliveries. The shifts vary in terms of distance traveled, working hours, and the number of deliveries.
 
 ### Street Data
 
@@ -39,11 +39,9 @@ SwissTLM3D: Provided the street network, street type, and width. SwissALTI3D: Us
 
 The segmentation of GPS data into different segments was achieved by analyzing the time differences between consecutive data points. Since Strava data already eliminates most static points, it allowed us to rely solely on significant time gaps for the segmentation. Thus, a moving time window was created for each route, and the mean time difference was calculated for each messenger. A new segment was then defined as any instance where the mean time difference exceeded a threshold of 20 seconds. The data was further refined by removing static rows and any segments shorter than two minutes. Each segment was then assigned a unique ID, and the number of differentiated segments was calculated for each messenger. Resulting in 36 deliveries for 'donner', and 22 deliveries for 'raeubertochter'.
 
-
 ### Map Matching
 
 Map matching denotes the process of assigning positional data (mostly in form of GPS coordinates) to some geographic information about the infrastructure, most commonly road networks @Meister2021. In our map matching process, we unified all roads into a single network. We then located the nearest point on this network for each GPS location and were then used to update the original GPS locations, effectively mapping each GPS point to its closest location on the road network.
-
 
 ### Alternative Trajectories
 
@@ -68,4 +66,3 @@ In our work, we encountered a significant challenge while using the hereR packag
 We attempted to mitigate this issue by running the routing function twice for each messenger on at least the first day, ensuring that all routes had an alternative. However, due to our restricted access to the here API, we were unable to generate an alternative for every single original trajectory.
 
 Before proceeding with our calculations, it was necessary to filter the segments to ensure that each one had both an original route and an alternative. This step was crucial to maintain the integrity of our subsequent analyses.
-

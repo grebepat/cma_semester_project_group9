@@ -4,4 +4,973 @@ format: html
 editor: visual
 ---
 
-Hallo Welt
+## Import Spatial Data
+
+Import spatial data. Geopackage was preprocessed using Quantum GIS Version 3.34.5.
+
+```{r import spatial data}
+
+#| echo: false
+#| warning: false
+#| message: false
+#| results: 'hide'
+
+## All Spatial Data is stored in a geopackage called basic_data. Basic_data consists of several layers such as the street network, surface type or housing footprint. The layers were preprocessed and cliped to the extent of the city outline of zurich using Quantum GIS Version 3.34.5
+
+
+## Show layers in basic_data.gpkg
+st_layers("gis_files/basic_data.gpkg")
+
+
+## Import street network from zurich, based on the swisstlm3d
+streets <- read_sf("gis_files/basic_data.gpkg", "street_network_z") |> 
+   select(objektart, geom) |> 
+  mutate(
+    objektart = as.factor(objektart),
+    width = as.numeric(substr(objektart, start = 1, stop = 1)),
+  ) |> 
+  na.omit()
+
+
+## Import city border of zurich
+outline <- read_sf("gis_files/basic_data.gpkg", "city_outline")
+
+
+## Import housing footprint of zurich
+housing <- read_sf("gis_files/basic_data.gpkg", "housing_footprint") |> 
+   select(objektart, geom) |>
+  mutate(
+    objektart = as.factor(objektart)
+  )
+
+
+## Import surface type of zurich
+surface <- read_sf("gis_files/basic_data.gpkg", "surface_type") |> 
+   select(art, geom) |> 
+  mutate(
+    art = as.factor(art)) |> 
+ filter(art == "fliessendes Gewässer" | art == "stehendes Gewässer" | art == "Strasse, Weg" | art == "Verkehrsinsel") |> 
+  na.omit()
+
+
+## Import digital height model DHM25, a set of data representing the 3D form of the earth’s surface without vegetation and buildings
+height <- terra::rast("gis_files/dhm25_zh.tif")
+
+
+```
+
+
+## 1. Generating alternative routes using hereR
+
+```{r generating alternatives outside of index.qmd}
+
+# Creating alternative routes
+## load all_routes_seg_tunnel_cor from global environment
+load("rda_files/all_routes_seg_tunnel_cor.rda")
+
+
+## Extract starting and endpoints from real world trajecotries
+a_to_b <- all_routes_seg_tunnel_cor |> 
+  group_by(segment_id_cor) |> 
+  slice(c(1, n())) |> 
+  ungroup()
+
+
+## quick and dirty overview
+tmap_mode("plot")
+tm_shape(a_to_b) + 
+  tm_dots(col = "gold", size = .25) +
+  tm_layout(frame = FALSE)
+
+
+## Get accsess to API from here, this API will later generate our alternative routes based on the start and endpoints of the deliveries
+library("hereR")
+set_key("PARpVmlSSQAeuGjMhIdg94LMi9s1ha4UShazq0j8sAo")
+
+
+## Create a dataframe with even rows -> ENDPOINTS
+df_even <- a_to_b[seq(2, nrow(a_to_b), by = 2), ]
+# df_even_raeubertochter <- filter(df_even, messenger == "raeubertochter")
+# df_even_donner <- filter(df_even, messenger == "donner")
+
+# if a single smaple is needed
+#df_even <- filter(df_even, segment_id_cor == 57)
+
+
+## Create a dataframe with odd rows -> STARTING POINTS
+df_odd <- a_to_b[seq(1, nrow(a_to_b), by = 2), ]
+# df_odd_raeubertochter <- filter(df_odd, messenger == "raeubertochter")
+# df_odd_donner <- filter(df_odd, messenger == "donner")
+
+# if a single smaple is needed
+#df_odd <- filter(df_odd, segment_id_cor == 57)
+testruns <- nrow(df_even)
+
+
+alternates <- map(seq_len(testruns), function(x){
+  alternative_lines = route(origin = df_odd[x,], destination = df_even[x,], transport_mode = "bicycle", traffic = FALSE, results = 7 , routing_mode = "short")
+  Sys.sleep(1.2)
+  segment_id = df_even$segment_id_cor[x]
+  alternative_lines$segment_id = segment_id
+  alternative_lines
+})
+
+
+
+## Transform alternative in spatial point dataframe
+df <- enframe(alternates)
+df <-  st_as_sf(do.call(rbind, alternates))
+
+
+merged_dataset <- df |> 
+  group_by(segment_id, rank) |> 
+  summarise(geometry = sf::st_union(geometry))
+
+alternative <- merged_dataset |> 
+  st_transform(crs = 2056) |> 
+  st_cast("POINT") |> 
+  st_zm(drop = TRUE) |> 
+  rename(segment_id = segment_id) |> 
+  mutate(
+    segment_id = as.factor(segment_id),
+    rank = as.factor(rank)
+  )
+
+
+## drop height information, well add id back later via dhm25
+alternative <- st_zm(alternative, drop = TRUE)
+
+# save robject
+save(alternative, file = "alternative.rda")
+
+
+```
+
+## 2. Visualize raw Data
+
+Visualize raw GPS data of both messengers using a simple ggplot.
+
+```{r visualize raw data via ggplot}
+
+load("rda_files/all_routes.rda")
+load("rda_files/raeubertochter_raw.rda")
+load("rda_files/donner_raw.rda")
+
+
+## Visualize the raw gps data from each messenger
+
+
+### Raeubertochter
+p_raw_raeubertochter <- ggplot() +
+  geom_sf(data = outline, alpha = 0) +
+  geom_sf(data = raeubertochter_raw, aes(color = "red"), size = 0.6) +
+  coord_sf(datum = st_crs(2056)) +
+  labs(x = "E",
+       y = "N") +
+    theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 90)
+  ) +
+  labs(title = "Raeubertochter")
+
+ggsave(plot = p_raw_raeubertochter, "figures/raeubertochter_raw.png", width = 100, height = 100, dpi = 250, units = "mm")
+
+
+### Donner
+p_raw_donner <- ggplot() +
+  geom_sf(data = outline, alpha = 0) +
+  geom_sf(data = donner_raw, aes(color = "red"), size = 0.6) +
+  coord_sf(datum = st_crs(2056)) +
+  labs(x = "E",
+       y = "N") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+     axis.text.x = element_text(angle = 90)
+  ) +
+  labs(title = "Donner")
+
+
+ggsave(plot = p_raw_donner, "figures/donner_raw.png", width = 100, height = 100, dpi = 250, units = "mm")
+
+
+
+```
+
+Subsample of raw data in a smaller spatial context
+
+```{r visualize raw data via tmap and spatial context}
+
+## Next, we want to visualize a subsample of our raw data in a smaller spatial context
+## visualize Subsample in spatial context
+
+
+## fixing an extent for a subsample of raeubertochter
+coords <- rbind(c(2681695, 1247822), c(2683188, 1247822), c(2683188, 1246616), c(2681695, 1246616), c(2681695, 1247822))
+
+
+## create an extent polygon
+polygon <- st_polygon(list(coords))
+
+
+## convert to spatial object
+extent_raeubertochter <- st_sfc(polygon, crs = 2056)
+
+
+## clip spatial data to extent to reduce data points and speed up computing
+housing_raeubertochter <- st_intersection(housing, extent_raeubertochter)
+
+# housing_raeubertochter <- housing_raeubertochter |> 
+#   group_by(objektart) |> 
+#   summarise(geometry = st_union(geom)) |> 
+#   ungroup()
+
+streets_raeubertochter <- st_intersection(streets, extent_raeubertochter)
+surface_raeubertochter <- st_intersection(surface, extent_raeubertochter)
+raeubertochter_ext <- st_intersection(raeubertochter_raw, extent_raeubertochter)
+
+
+
+## Reduce data set to every second gps fix to get a better overview
+subset_raeubertochter_raw <- raeubertochter_ext[seq(1, nrow(raeubertochter_ext), by = 2), ]
+
+
+## map including spatial context of zurich
+
+tmap_mode("plot")
+tm_raw_context <- tm_shape(streets_raeubertochter, bbox = extent_raeubertochter) +
+  tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +
+tm_shape(housing_raeubertochter, bbox = extent_raeubertochter) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = .9) +
+tm_shape(subset_raeubertochter_raw, bbox = extent_raeubertochter) +
+  tm_symbols(size = 0.6, col = "red",  alpha = 0.7, border.col = "red", legend.col.show = FALSE) +
+  tm_layout(frame = FALSE)
+
+
+## show map
+print(tm_raw_context)
+
+
+## save as a png
+tmap_save(tm_raw_context, "figures/raeubertochter_raw_context.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+```
+
+
+```{r}
+
+
+
+
+```
+
+Visualize raw data via interactive map
+
+```{r visualize raw data via interactive map}
+
+## Browse trough raw_data
+
+raw_data <- all_routes[seq(1, nrow(all_routes), by = 2), ]
+
+tmap_mode("view")
+
+tm_shape(raw_data) +
+  tm_symbols(size = .25, col = "messenger",  alpha = 0.7, legend.col.show = FALSE, palette = c("red", "yellow"), border.col = "black", border.lwd = 0.1) +
+  tm_layout(frame = FALSE) +
+  tm_basemap(server = "CartoDB.PositronNoLabels", alpha = 0.75) +
+  tm_view(symbol.size.fixed = F) +
+  tm_facets(by = "messenger", sync = TRUE, ncol = 2)
+
+
+######################################### LEAFLET #################################
+
+raw_data |> 
+  st_transform(crs = 4326) |>
+leaflet() |>
+    addCircleMarkers(opacity = 0.5,
+                     color = ~pal(messenger),
+                     radius = 2,
+                     label = ~as.character(messenger),
+                     group = ~messenger) |> 
+    addProviderTiles(providers$CartoDB.PositronNoLabels, options = tileOptions(opacity = 0.75))  |> 
+  addScaleBar(position = "bottomleft", scaleBarOptions(imperial = FALSE)) |> 
+  addLegend(position = 'topright',
+            pal = pal,
+            values = ~messenger,
+            title = "bike messengers")  |> 
+  addLayersControl(~messenger, ) 
+  
+
+
+```
+
+
+## 3. Visualize Segmented Trajectories
+
+Visualize segmented GPS data of both messengers using a simple ggplot.
+
+```{r visualize segmented data via ggplot}
+
+load("rda_files/all_routes_seg.rda")
+load("rda_files/raeubertochter_seg.rda")
+load("rda_files/donner_seg.rda")
+
+## Visualize the segmented gps data from each messenger
+### Raeubertochter
+
+## create own color palette
+my_palette <- colorRampPalette(brewer.pal(11, "Spectral"))
+
+
+## visualiaze raeubertochter deliveries
+p_seg_raeubertochter <- ggplot() +
+  geom_sf(data = outline, alpha = 0) +
+  geom_sf(data = raeubertochter_seg, aes(color = segment_id), size = 0.6) +
+   scale_color_manual(values = my_palette(22)) +
+  coord_sf(datum = st_crs(2056)) +
+  labs(x = "E",
+       y = "N") +
+    theme_minimal() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "Raeubertochter")
+
+
+ggsave(plot = p_seg_raeubertochter, "figures/p_seg_raeubertochter.png", width = 100, height = 100, dpi = 250, units = "mm")
+
+
+## visualiaze donner deliveries
+p_seg_donner <- ggplot() +
+  geom_sf(data = outline, alpha = 0) +
+  geom_sf(data = donner_seg, aes(color = segment_id), size = 0.6) +
+     scale_color_manual(values = my_palette(37)) +
+  coord_sf(datum = st_crs(2056)) +
+  labs(x = "E",
+       y = "N") +
+  theme_minimal() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "Donner")
+
+
+
+ggsave(plot = p_seg_donner, "figures/p_seg_donner.png", width = 100, height = 100, dpi = 250, units = "mm")
+
+
+
+```
+
+Subsample of segmented data in a smaller spatial context
+
+```{r visualize segmented data via tmap and spatial context, fig.height=6, fig.width=8, fig.dpi=500}
+
+
+### Next, we want to visualize a subsample of our segmented data in a smaller spatial context
+## Visualize Subsample in spatial context
+
+
+## Clip segmented data to a smaller extent to reduce computing time
+raeubertochter_ext2 <- st_intersection(raeubertochter_seg, extent_raeubertochter)
+
+
+## create smaller subsample consisting of every second point to get a better overview
+subset_raeubertochter_seg <- raeubertochter_ext2[seq(1, nrow(raeubertochter_ext2), by = 2), ]
+
+
+## transform segment_id to numeric and back to factor
+subset_raeubertochter_seg$segment_id <- as.numeric(subset_raeubertochter_seg$segment_id)
+subset_raeubertochter_seg$segment_id <- as.factor(subset_raeubertochter_seg$segment_id)
+unique(subset_raeubertochter_seg$segment_id)
+
+## Create own color palette
+my_palette2 <- c("#9E0142", "#F46D43", "#FFFF66", "#66C2A5","#3288BD", "#5E4FA2")
+
+
+tmap_mode("plot")
+
+
+tm_seg_context <- tm_shape(streets_raeubertochter, bbox = extent_raeubertochter) +
+  tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +
+tm_shape(housing_raeubertochter, bbox = extent_raeubertochter) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = .9) +
+tm_shape(subset_raeubertochter_seg, bbox = extent_raeubertochter) +
+  tm_symbols(size = 0.6, col = "segment_id", palette = my_palette2, alpha = 0.7, border.col = "NA", legend.col.show = FALSE) +
+  tm_layout(frame = FALSE) 
+
+
+## Show map
+print(tm_seg_context)
+
+
+## save as png
+tmap_save(tm_seg_context, "figures/raeubertochter_seg_context.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+
+```
+
+Visualize raw data via interactive map
+
+```{r visualize segmented data via interactive map}
+
+seg_data <- all_routes_seg[seq(1, nrow(all_routes), by = 2), ]
+
+tmap_mode("view")
+
+tm_shape(raw_data) +
+  tm_symbols(size = .25, col = "messenger",  alpha = 0.7, legend.col.show = FALSE, palette = "Spectral", border.col = "black", border.lwd = 0.1) +
+  tm_layout(frame = FALSE) +
+  tm_basemap(server = "CartoDB.PositronNoLabels", alpha = 0.75) +
+  tm_view( symbol.size.fixed = F) +
+  tm_facets(by = "messenger", sync = TRUE, ncol = 2)
+
+```
+
+
+## 4. Visualize Tunnel Merging
+
+Visualize automated workflow for troubling tunnel problems
+
+```{r visualize corrected segments}
+
+
+### we want to visualize the correction progress from the original segmentation to the corrected version including our tunnel problem
+
+tmap_mode("plot")
+
+## create a background for future maps
+background <- tm_shape(streets_raeubertochter, bbox = extent_raeubertochter) +
+  tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +
+tm_shape(housing_raeubertochter, bbox = extent_raeubertochter) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = .9) +
+   tm_layout(frame = FALSE) 
+
+
+## First show segments
+p1 <-  background + tm_shape(subset_raeubertochter_seg, bbox = extent_raeubertochter) +
+  tm_symbols(size = 0.9, col = "segment_id", palette = my_palette2, alpha = 0.9, border.col = "NA", legend.col.show = FALSE) +
+   tm_layout(frame = FALSE, bg.color = "transparent")
+
+p1
+
+## save to png 
+#tmap_save(p6, "raeubertochter_cor.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+
+## Then show start and ending points of trajectories from raeubertochter inside our extent
+first_last_points_raeubertochter <- first_last_points |> 
+  filter(messenger == "raeubertochter") |> 
+  st_intersection(extent_raeubertochter)
+
+
+p2 <- background + 
+tm_shape(subset_raeubertochter_seg, bbox = extent_raeubertochter) +
+  tm_symbols(size = 0.9, col = "segment_id", palette = my_palette2, alpha = 0.9, border.col = "NA",legend.col.show = FALSE) +
+tm_shape(first_last_points_raeubertochter, bbox = extent_raeubertochter) +
+  tm_symbols(size = 2, col = "gold", alpha = 1, border.col = "grey25", border.alpha = 0.5, legend.col.show = F) +
+  tm_layout(frame = FALSE, bg.color = "transparent")
+
+p2
+
+## save to png 
+tmap_save(p2, "figures/start_endpoints.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+
+## Then show our buffer at the tunnel entry and exit
+p3 <- background +  
+tm_shape(buffer_entry, bbox = extent_raeubertochter) +
+  tm_polygons(col = "red", border.col = "red", lwd = 0.5, alpha = 0.7) +
+tm_shape(buffer_exit) +
+  tm_polygons(col = "red", border.col = "red", lwd = 0.5, alpha = 0.7)+
+tm_layout(frame = FALSE, bg.color = "transparent") 
+
+p3
+
+## save to png 
+tmap_save(p3, "figures/buffer.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+
+## Then show overlay -> whicht starting and endpoints lay within the entry/exit buffers
+p4 <- background + 
+tm_shape(buffer_entry, bbox = extent_raeubertochter) +
+  tm_polygons(col = "red", border.col = "red", lwd = 0.5, alpha = 0.7) +
+tm_shape(buffer_exit) +
+  tm_polygons(col = "red", border.col = "red", lwd = 0.5, alpha = 0.7)+
+  tm_shape(first_last_points_raeubertochter, bbox = extent_raeubertochter) +
+   tm_symbols(size = 2, col = "gold", alpha = 1, border.col = "grey25", border.alpha = 0.5, legend.col.show = F) +
+  tm_layout(frame = FALSE, bg.color = "transparent") 
+
+p4
+
+## save to png 
+tmap_save(p4, "figures/overlay.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+
+## then show unmerged/merged results
+## unmerged
+p5 <- background +
+  tm_shape(subset_raeubertochter_seg, bbox = extent_raeubertochter) +
+  tm_symbols(size = 0.6, col = "segment_id", palette = my_palette2, alpha = 0.7, border.col = "NA", legend.col.show = FALSE) +
+  tm_layout(frame = FALSE, bg.color = "transparent") 
+
+p5
+
+## save to png 
+tmap_save(p5, "raeubertochter_cor.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+
+## Adapt color palette to less segments
+my_palette3 <- c("#9E0142", "#F46D43", "#FFFF66", "#3288BD",  "#5E4FA2")
+
+
+## merged
+subset_raeubertochter_cor <- raeubertochter_cor[seq(1, nrow(raeubertochter_cor), by = 2), ]
+subset_raeubertochter_cor <- st_intersection(subset_raeubertochter_cor, extent_raeubertochter)
+
+subset_raeubertochter_cor$segment_id_cor <- as.numeric(subset_raeubertochter_cor$segment_id_cor)
+subset_raeubertochter_cor$segment_id_cor <- as.factor(subset_raeubertochter_cor$segment_id_cor)
+
+
+p6 <- background + 
+tm_shape(subset_raeubertochter_cor, bbox = extent_raeubertochter) +
+  tm_symbols(size = 0.9, col = "segment_id_cor", palette = my_palette3, alpha = 0.9, border.col = "NA", legend.col.show = FALSE) +
+  tm_layout(frame = FALSE, bg.color = "transparent")
+
+## show merged segments
+print(p6)
+
+## save to png 
+tmap_save(p6, "figures/merged.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+
+```
+
+## 5. Visualize Original and Alternative Trajectories
+
+```{r visualize alternative routing,  fig.height= 9, fig.width=9, fig.align='center'}
+
+
+load("rda_files/donner_cor.rda")
+load("rda_files/raeubertochter_cor.rda")
+
+
+
+## Create a new extent for this
+coords <- rbind(c(2679514  , 1249013 ), c(2683075, 1249013 ), c(2683075, 1247635), c(2679514 , 1247635), c(2679514 , 1249013 ))
+
+
+## Create a polygon
+polygon <- st_polygon(list(coords))
+
+
+## Convert to spatial object
+extent2 <- st_sfc(polygon, crs = 2056)
+
+
+## Clip spatial data to new extent to speed up computing time
+streets_alt <- st_intersection(streets, extent2)
+housing_alt <- st_intersection(housing, extent2)
+
+
+## filter one representative delivery
+donner_vis <- donner_cor |> 
+   filter(segment_id_cor == 1)
+
+
+## filter one representative alternative
+alt <- alternative |> 
+  filter(segment_id == 1) |> 
+  group_by(segment_id, rank) |> 
+  summarise(geometry = st_combine(geometry)) |> 
+  st_cast("LINESTRING") |> 
+mutate(
+  rank = as.numeric(rank),
+  rank = as.factor(rank)
+)
+
+str(alt)
+
+
+
+## filter one representative start- and endpoint
+df_odd_vis <- df_odd |> 
+  filter(segment_id_cor == 1)
+
+df_even_vis <- df_even |> 
+  filter(segment_id_cor == 1)
+
+
+## set mode to plot
+tmap_mode("plot")
+
+
+## create a new background
+background2 <- tm_shape(streets_alt, bbox = extent2) +
+ tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +  
+  tm_shape(housing_alt, bbox = extent2) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = .9) 
+
+
+## map original route
+original_route <- background2 +
+  tm_shape(donner_vis) +
+  tm_dots(col = "#9E1FA2", size = .3, alpha = 0.8) +
+ tm_layout(frame = FALSE, bg.color = "transparent") 
+
+
+
+## print original routing
+print(original_route)
+
+tmap_save(original_route, "figures/original_route.png", width = 300, height = 125, dpi = 250, units = "mm")
+
+
+## combine original route with start and endpoints
+tm4 <- background2 +
+  tm_shape(donner_vis) +
+  tm_dots(col = "#9E1FA2", size = .3, alpha = 0.8) +
+  tm_shape(df_even_vis) +
+  tm_dots(col = "steelblue1", size = 2) +
+ tm_shape(df_odd_vis) +
+  tm_dots(col = "gold", size = 2) +
+ tm_layout(frame = FALSE, bg.color = "transparent")
+
+
+## print map with start and endpoints
+print(tm4)
+
+
+## save as png
+ tmap_save(tm4, "figures/original_route_start_endpoints.png", width = 300, height = 125, dpi = 250, units = "mm")
+
+
+my_palette4 <- c("#d7191c", "#fdae61","#2b83ba", "#acdfa9", "yellow")
+ 
+ 
+ 
+## show alternative routing generated by hereR and based on starting and endpoinnts
+tm5 <- background2 +
+ tm_shape(alt) +
+tm_lines(col = "rank", palette = my_palette4, lwd = 6, legend.col.show = FALSE, alpha = .8) +
+ tm_shape(df_even_vis) +
+  tm_dots(col = "steelblue1", size = 2) +
+ tm_shape(df_odd_vis) +
+  tm_dots(col = "gold", size = 2) +
+ tm_layout(frame = FALSE, bg.color = "transparent") 
+
+
+## show map
+print(tm5)
+
+
+## save as png
+tmap_save(tm5, "figures/alternative_routing.png", width = 300, height = 125, dpi = 250, units = "mm")
+
+
+## combine everything together
+tm6 <- background2 +
+  tm_shape(alt) +
+tm_lines( col = "rank", palette = my_palette4, lwd = 6, legend.col.show = FALSE, alpha = 0.8) +
+   tm_shape(donner_vis) +
+  tm_dots(col = "#9E1FA2", size = .25, alpha = 0.8) +
+ tm_shape(df_even_vis) +
+  tm_dots(col = "steelblue1", size = 2) +
+ tm_shape(df_odd_vis) +
+  tm_dots(col = "gold", size = 2) +
+ tm_layout(frame = FALSE, bg.color = "transparent") 
+
+
+## show combined map
+print(tm6)
+
+
+## save as png
+tmap_save(tm6, "figures/final_result.png", width = 300, height = 125, dpi = 250, units = "mm")
+
+
+
+```
+
+## 6.  Visualize Map Matching
+
+Interactive visualization of map matching results
+
+```{r visualize map matching via tmap and interactive}
+
+# Noch gedanken bez. dynamischeren visualisierungen machen
+
+load("rda_files/filtered_df.rda")
+load("rda_files/nearest.rda")
+
+box = st_bbox(filtered_df)
+
+tmap_mode("view")
+tm_shape(street_network) + 
+  tm_lines() +
+tm_shape(nearest) + 
+  tm_lines(col = "darkred", lwd = 2, lty = "dashed") +
+tm_shape(filtered_df) + 
+  tm_dots(col = "type") +
+  tm_basemap(server = NULL) +
+    tm_view(bbox =  box) 
+
+```
+
+static visualization via tmap and in a smaller spatial context
+
+```{r visualize map matching via tmap and}
+
+### Next, we want to visualize a subsample of our segmented data in a smaller spatial context
+## Visualize Subsample in spatial context
+
+
+## Define the coordinates of the polygon for a new extent
+coords <- rbind(c(2682094, 1247370), c(2682094, 1247612), c(2682433, 1247612), c(2682433, 1247370), c(2682094, 1247370))
+
+
+## Create a polygon
+polygon <- st_polygon(list(coords))
+
+## Convert to spatial object
+extent4 <- st_sfc(polygon, crs = 2056)
+
+
+## clip spatial data to new extent
+housing1 <- st_intersection(housing, extent4)
+streets1 <- st_intersection(streets, extent4)
+surface1 <- st_intersection(surface, extent4)
+combined_vis <- st_intersection(filtered_df, extent4)
+
+
+## set mode
+tmap_mode("plot")
+
+
+## visualize map matching in a smaller spatial context
+tm_7 <- map_matching <- tm_shape(streets1, bbox = extent4) + 
+   tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +
+  tm_shape(housing1, bbox = extent4) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = 0.9) +
+tm_shape(nearest) + 
+  tm_lines(lwd = 1, lty = "dashed", col = "grey") +
+tm_shape(combined_vis$geometry) + 
+  tm_dots(col = "purple", border.col = "purple", size = 0.6, alpha = .9, ) + 
+tm_shape(combined) + 
+  tm_dots(col = "lightblue", size = 0.6, alpha = .9, border.col = "lightblue",) +
+  tm_layout(frame = FALSE, bg.color = "transparent") 
+
+
+## Show map
+print(tm7)
+
+
+## save as png
+ tmap_save(tm_7, "figures/map_matching.png", width = 250, height = 200, dpi = 250, units = "mm")
+
+
+```
+
+## 7. Visualize uneven distribution
+
+```{r}
+
+
+
+## We want to visualize the problem here
+## Problematic: uneven distribution alternative and original points as shown here
+## first we filter delivery number 57 because it illustrates the problem very good
+df_lines1 <- filtered_df |> 
+  group_by(type, messenger, segment_id, rank) |> 
+  summarise(geometry = st_combine(geometry)) |> 
+  st_cast("LINESTRING")
+
+
+## filter alternative segment 57
+df_57_lines <- df_lines1 |> 
+  filter(segment_id == 57 & (rank == 6 | rank == 7))
+
+
+## filter original segment 57
+df_57_points <- filtered_df |> 
+  filter(segment_id == 57 & rank == 0)
+
+
+## Define the coordinates of the new extent
+coords <- rbind(c(2683114 , 1247977), c(2683114 , 1249227), c(2683785, 1249227), c(2683785, 1247977), c(2683114 , 1247977))
+
+## Create a polygon
+polygon <- st_polygon(list(coords))
+
+## Convert to spatial object
+extent <- st_sfc(polygon, crs = 2056)
+
+## clip everything to new extent for faster computing
+housing5 <- st_intersection(housing, extent)
+streets5 <- st_intersection(streets, extent)
+surface5 <- st_intersection(surface, extent)
+
+combined_vis <- df_57_points |> 
+  st_intersection(extent)
+
+df_lines_vis <- df_57_lines |> 
+  st_intersection(extent) 
+
+
+
+
+## create a subset so only every second point is shown
+subset_data <- combined_vis[seq(1, nrow(combined_vis), by = 2), ]
+subset_data2 <- st_cast(df_lines_vis, "POINT")
+subset_data2 <- subset_data2[seq(1, nrow(subset_data2), by = 2), ]
+
+## set plotting mode
+tmap_mode("plot")
+
+
+
+problem <- tm_shape(streets5) +
+  tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +
+tm_shape(housing5) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = .9) +
+tm_shape(subset_data) +
+  tm_dots(size = 0.8, col = "#9E1FA2", alpha = 0.8, border.col = "grey25", border.alpha = 0.2) +
+  tm_shape(subset_data2) +
+  tm_symbols(size = 0.8, col = "rank", palette = c("#11E2A1", "#2b83ba"), alpha = 0.8, border.col = "grey25", border.alpha = 0.2, legend.col.show = FALSE) +
+  tm_layout(frame = FALSE) 
+ 
+
+## show map
+print(problem)
+
+
+## save as png
+tmap_save(problem, "figures/problem.png", width = 100, height = 175, dpi = 250, units = "mm")
+
+```
+
+# 8. Visualize Raw vs. Interpolated
+
+```{r comparison of raw and interpolated fixes}
+
+
+
+## We want to compare the raw gps and interpolaed data
+## Define the coordinates of the polygon
+coords <- rbind(c(2683114 , 1247977), c(2683114 , 1249227), c(2683785, 1249227), c(2683785, 1247977), c(2683114 , 1247977))
+
+## Create a polygon
+polygon <- st_polygon(list(coords))
+
+
+## Convert to spatial object
+extent <- st_sfc(polygon, crs = 2056)
+
+
+## Clip to new extent
+housing5 <- st_intersection(housing, extent)
+streets5 <- st_intersection(streets, extent)
+surface5 <- st_intersection(surface, extent)
+
+
+
+## select interpolated data
+df_57_interp <- df_single_points |> 
+  filter(segment_id == 57 & (rank == 0 | rank == 6 | rank == 7))
+
+df_57_interp$type <- factor(df_57_interp$type, levels = c("original", "alternative"))
+df_57_interp$rank <- as.factor(df_57_interp$rank)
+
+
+## clip to new extent
+df_57_interp <- df_57_interp |> 
+  st_intersection(extent)
+
+
+## create subset so only every second point is shown
+subset_data_interp <- df_57_interp[seq(1, nrow(df_57_interp), by = 2), ]
+
+
+my_palette6 = c( "#9E1FA2","#11E2A1","#2b83ba")
+
+tmap_mode("plot")
+
+problem_solved <- tm_shape(streets5) +
+  tm_lines(lwd = "width", scale = 2.5, legend.lwd.show = FALSE) +
+tm_shape(housing5) +
+  tm_polygons(col = "grey25", border.col = "white", lwd = 0.5, alpha = .9) +
+tm_shape(subset_data_interp) +
+  tm_symbols(size = 0.8, col = "rank", palette = my_palette6, alpha = 0.8, border.col = "grey25", border.alpha = 0.2, legend.col.show = FALSE) +
+  tm_layout(frame = FALSE) 
+ 
+
+## show map
+print(problem_solved)
+
+
+## save as png
+tmap_save(problem_solved, "figures/problem_solved.png", width = 100, height = 175, dpi = 250, units = "mm")
+
+
+
+
+```
+
+## 9.  Visualize alternatives and originals
+
+```{r visualize original and alternatives per messenger, fig.width=12, fig.height=12}
+
+## simple overview alternatives vs originals
+df_single_points$type <- factor(df_single_points$type, levels = c("original", "alternative"))
+
+
+## split dataframe into different messengers
+raeubertochter_final <- filter(df_single_points, messenger == "raeubertochter")
+donner_final <- filter(df_single_points, messenger == "donner")
+
+
+## create own color palette
+my_palette <- colorRampPalette(brewer.pal(11, "Spectral"))
+
+
+## raeubertochter
+raeubertochter_final <- ggplot() +
+  geom_sf(data = outline, alpha = 0) +
+  geom_sf(data = raeubertochter_final, aes(color = type), size = 0.6) +
+   scale_color_manual(values = c( "#9E1FA2", "#11E2A1")) +
+  coord_sf(datum = st_crs(2056)) +
+  facet_grid(~type) +
+  labs(x = "E",
+       y = "N") +
+    theme_minimal() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "Raeubertochter")
+
+ggsave(plot = raeubertochter_final, "figures/raeubertochter_final.png", width = 100, height = 100, dpi = 250, units = "mm")
+
+
+
+
+## Donner
+donner_final <- ggplot() +
+  geom_sf(data = outline, alpha = 0) +
+  geom_sf(data = donner_final, aes(color = type), size = 0.6) +
+   scale_color_manual(values = c( "#9E1FA2", "#11E2A1")) +
+  coord_sf(datum = st_crs(2056)) +
+  facet_grid(~type) +
+  labs(x = "E",
+       y = "N") +
+    theme_minimal() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "Donner")
+
+
+ggsave(plot = donner_final, "figures/donner_final.png", width = 100, height = 100, dpi = 250, units = "mm")
+
+
+```

@@ -5,3 +5,5 @@ gis_files/
 gps_files_shared/
 data/
 .Rproj.user
+.rda/
+figures/
