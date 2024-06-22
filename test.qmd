@@ -6,23 +6,22 @@ date: "18.06.2024"
 format: 
   html:
     code-fold: true
+    toc: true
+    toc-location: left
+lang: en  
+bibliography: bibliography.bib
 execute:
   warning: false
   message: false
   cache:   true
-lang: en  
-bibliography: bibliography.bib
-fig-caption: true
+  echo:    false
+  output:  false
 ---
 
 # Install Packages
 
 ```{r install required packages}
 
-#| echo: false
-#| warning: false
-#| message: false
-#| results: 'hide'
 
 options(repos = c(CRAN = "https://cran.rstudio.com"))
 
@@ -67,11 +66,10 @@ p_install("RColorBrewer", force = FALSE)
 Load necessary libraries
 
 ```{r load necessary libraries}
+#| echo: true
 
-#| echo: false
-#| warning: false
-#| message: false
-
+  
+  
 library("ggh4x")
 library("dplyr")
 library("ggplot2")
@@ -91,6 +89,7 @@ library("hereR")
 library("png")
 library("gridExtra")
 library("RColorBrewer")
+library("purrr")
 
 
 ```
@@ -101,9 +100,7 @@ Import gps data from bike messengers
 
 ```{r import raw gps data}
 
-#| warning: false
-#| message: false
-#| results: 'hide'
+
 
 ## generate a list of all filenames including the path from the subfolder they are stored in
 file <- list.files("gps_files_shared", recursive = TRUE, pattern = "\\.gpx$", full.names = TRUE)
@@ -124,14 +121,13 @@ process_file <- function(file) {
   info <- extract_info(file)
   df$messenger <- info$messenger
   df$id <- info$id
-  
+
   df_sf <- st_as_sf(df, coords = c("lon", "lat"), crs = 4326, remove = FALSE)
   df_sf <- st_transform(df_sf, crs = 2056)
   df_sf$shift <- gsub('.*/(.*).gpx','\\1', file)
   df_sf$x <- st_coordinates(df_sf)[,1]
   df_sf$y <- st_coordinates(df_sf)[,2]
   df_sf <- select(df_sf, id, messenger, shift, time, x, y, ele, geometry)
-  
   df_sf$origin <- file
   df_sf
 }
@@ -143,10 +139,15 @@ single_routes <- purrr::map(file, process_file)
 
 ## Combine all results
 all_routes <- do.call(rbind, single_routes)
+save(all_routes, file = "rda_files/all_routes.rda")
 
-## Seperate file into raeubertochter and donner
+
+## Seperate file into raeubertochter and donner and save output for visualizations under preprocessing.qmd
 raeubertochter_raw <- filter(all_routes, messenger == "raeubertochter")
+save(raeubertochter_raw, file = "rda_files/raeubertochter_raw.rda")
+
 donner_raw <- filter(all_routes, messenger == "donner")
+save(donner_raw, file = "rda_files/donner_raw.rda")
 
 
 ## Our raw data covers one shift per messenger, a total of 11'699 fixes were recorded:
@@ -155,264 +156,92 @@ donner_raw <- filter(all_routes, messenger == "donner")
 
 ```
 
-# Task 2: Import Spatial Data
-
-Import spatial data. Geopackage was preprocessed using Quantum GIS Version 3.34.5.
-
-```{r import spatial data}
-
-#| warning: false
-#| message: false
-#| results: 'hide'
-
-## All Spatial Data is stored in a geopackage called basic_data. Basic_data consists of several layers such as the street network, surface type or housing footprint. The layers were preprocessed and cliped to the extent of the city outline of zurich using Quantum GIS Version 3.34.5
 
 
-## Show layers in basic_data.gpkg
-st_layers("gis_files/basic_data.gpkg")
 
 
-## Import street network from zurich, based on the swisstlm3d
-streets <- read_sf("gis_files/basic_data.gpkg", "street_network_z") |> 
-   select(objektart, geom) |> 
-  mutate(
-    objektart = as.factor(objektart),
-    width = as.numeric(substr(objektart, start = 1, stop = 1)),
-  ) |> 
-  na.omit()
+
+::: {#fig-raw_data layout-ncol=2}
+![Räubertochter](figures/raeubertochter_raw.png){#fig-raeubertochter_raw}
+
+![Donner](figures/donner_raw.png){#fig-donner_raw}
+
+RAW DATA
+:::
 
 
-## Import city border of zurich
-outline <- read_sf("gis_files/basic_data.gpkg", "city_outline")
 
 
-## Import housing footprint of zurich
-housing <- read_sf("gis_files/basic_data.gpkg", "housing_footprint") |> 
-   select(objektart, geom) |>
-  mutate(
-    objektart = as.factor(objektart)
-  )
 
 
-## Import surface type of zurich
-surface <- read_sf("gis_files/basic_data.gpkg", "surface_type") |> 
-   select(art, geom) |> 
-  mutate(
-    art = as.factor(art)) |> 
- filter(art == "fliessendes Gewässer" | art == "stehendes Gewässer" | art == "Strasse, Weg" | art == "Verkehrsinsel") |> 
-  na.omit()
 
 
-## Import digital height model DHM25, a set of data representing the 3D form of the earth’s surface without vegetation and buildings
-height <- terra::rast("gis_files/dhm25_zh.tif")
 
 
-```
-
-## Visualize raw Data
-
-Visualize raw GPS data of both messengers using a simple ggplot.
-
-```{r visualize raw data via ggplot, out.width="100%", dpi=500, fig.cap="hahahahaha"}
 
 
-## Visualize the raw gps data from each messenger
 
 
-### Raeubertochter
-p_raw_raeubertochter <- ggplot() +
-  geom_sf(data = outline, alpha = 0) +
-  geom_sf(data = raeubertochter_raw, aes(color = "red"), size = 0.6) +
-  coord_sf(datum = st_crs(2056)) +
-  labs(x = "E",
-       y = "N") +
-    theme_minimal() +
-  theme(
-    legend.position = "none",
-    axis.text.x = element_text(angle = 90)
-  ) +
-  labs(title = "Raeubertochter")
+
+# Task 3: Signal Sync: Assessing Sampling Intervals Across Messenger GPS Systems
+
+```{r assessing sampling intervals}
+#| echo: true
 
 
-### Donner
-p_raw_donner <- ggplot() +
-  geom_sf(data = outline, alpha = 0) +
-  geom_sf(data = donner_raw, aes(color = "red"), size = 0.6) +
-  coord_sf(datum = st_crs(2056)) +
-  labs(x = "E",
-       y = "N") +
-  theme_minimal() +
-  theme(
-    legend.position = "none",
-     axis.text.x = element_text(angle = 90)
-  ) +
-  labs(title = "Donner")
 
-## Arrange plots together
-grid.arrange(p_raw_raeubertochter,p_raw_donner, nrow=1, ncol= 2)
+## If a larger sampling grid is needed: selecting every 10th row from  movement data:
+###all_routes <- all_routes[seq(from = 1, to = #nrow(all_routes), by = 5), ]
 
 
+## calculate rowwise time difference
+all_routes <- all_routes |> 
+    group_by(id) |> 
+    mutate(
+    time_difference = as.numeric(difftime(time, lag(time), units = "secs"))) |>
+    ungroup()
+
+
+## How do the time difference differ between messengers?
+all_routes |> 
+  group_by(id) |> 
+  filter(time_difference <= 30) |> # remove outliers to get a clearer view on the average sampling interval
+  summarise(
+    mean <- mean(time_difference, na.rm = T)
+    )
+
+## Both with similar time difference between fixes, raeubertochter with slightly shorter intervals
+
+
+## max value between two fixes, in min
+max(all_routes$time_difference, na.rm = T) / 60
+
+## max time difference at 50min
 
 ```
 
-Subsample of raw data in a smaller spatial context
+Visualize sampling interval
 
-```{r v1, out.width = "150%", dpi=300, fig.cap="du löli"}
+```{r visualize sampling intervals via ggplot}
+#| echo: true
+#| output:  true
 
-
-## Visualize the raw gps data from each messenger
-
-
-### Raeubertochter
-p_raw_raeubertochter <- ggplot() +
-  geom_sf(data = outline, alpha = 0) +
-  geom_sf(data = raeubertochter_raw, aes(color = "red"), size = 0.6) +
-  coord_sf(datum = st_crs(2056)) +
-  labs(x = "E",
-       y = "N") +
-    theme_minimal() +
-  theme(
-    legend.position = "none",
-    axis.text.x = element_text(angle = 90)
-  ) +
-  labs(title = "Raeubertochter")
+## Quick overview how time differences distribute
+p_sampling_interval <- ggplot(all_routes, aes(x = time_difference)) +
+  geom_histogram(binwidth = 0.25, col = "white", fill = "grey25") +
+  scale_y_log10() +
+  scale_x_log10() +
+  labs(x = "Time Difference in sec. (Log Scale)", y = "Count (Log Scale)") +
+  ggtitle("Histogram of Time Differences with Log Y Axis and Log X Axis") +
+  facet_wrap(all_routes$id) +
+  theme_minimal()
 
 
-### Donner
-p_raw_donner <- ggplot() +
-  geom_sf(data = outline, alpha = 0) +
-  geom_sf(data = donner_raw, aes(color = "red"), size = 0.6) +
-  coord_sf(datum = st_crs(2056)) +
-  labs(x = "E",
-       y = "N") +
-  theme_minimal() +
-  theme(
-    legend.position = "none",
-     axis.text.x = element_text(angle = 90)
-  ) +
-  labs(title = "Donner")
+## show histogram
+print(p_sampling_interval)
 
-## Arrange plots together
-grid.arrange(p_raw_raeubertochter,p_raw_donner, nrow=1, ncol=2)
-```
+# Both with similar but slightly different sampling regimes, raeubertochter with an intervall of ~1 second. It seems that static time is already removed in here dataset -> strava data! Most time differences between 1 and 10 seconds, some outliers at more than 1000 seconds
 
-
-
-Subsample of raw data in a smaller spatial context
-
-```{r v2, out.width = "100%", dpi=300}
-
- ggplot() +
-  geom_sf(data = outline, alpha = 0) +
-  geom_sf(data = all_routes, aes(color = "red"), size = 0.6) +
-  coord_sf(datum = st_crs(2056)) +
-  labs(x = "E",
-       y = "N") +
-  facet_grid(~messenger) +
-    theme_minimal() +
-  theme(
-    legend.position = "none",
-    strip.text = element_text(face = "bold", hjust = 0.01, vjust = 4),
-    axis.title.x = element_text(margin = margin(t = 20)),  
-    axis.title.y = element_text(margin = margin(r = 20)),
-    axis.text.x = element_text(angle = 90)
-  ) 
- 
+# Donner with more variation between fixes, but still short intervals, might need another segmentation...
 
 ```
-
-
-
-
-Subsample of raw data in a smaller spatial context
-
-```{r v3, out.width = "100%", dpi=300}
-
-#| label: fig-firstFigure
-#| fig-cap: All included posmo tracks from the three data sets colored by mode of transport.
-
-
-## Visualize the raw gps data from each messenger
-
-
-
- ggplot() +
-  geom_sf(data = outline, alpha = 0) +
-  geom_sf(data = all_routes, aes(color = "red"), size = 0.6) +
-  coord_sf(datum = st_crs(2056)) +
-  labs(x = "E",
-       y = "N") +
-  facet_grid(~messenger) +
-    theme_minimal() +
-  theme(
-    legend.position = "none",
-    axis.text.x = element_blank(),
-    axis.text.y = element_blank(),
-    strip.text = element_text(face = "bold", hjust = 0.01, vjust = 4),
-    axis.title.x = element_text(margin = margin(t = 20)),  
-    axis.title.y = element_text(margin = margin(r = 20)) 
-  ) 
- 
-
-
-
-```
-
-
-
-
-Subsample of raw data in a smaller spatial context
-
-```{r v4, out.width = "100%", dpi=300}
-
-#| label: fig-firstFigure
-#| fig-cap: All included posmo tracks from the three data sets colored by mode of transport.
-
-
-## Visualize the raw gps data from each messenger
-
-
-
-### Raeubertochter
-p_raw_raeubertochter <- ggplot() +
-  geom_sf(data = outline, alpha = 0) +
-  geom_sf(data = raeubertochter_raw, aes(color = "red"), size = 0.6) +
-  coord_sf(datum = st_crs(2056)) +
-  labs(x = "E",
-       y = "N") +
-    theme_minimal() +
-  theme(
-    legend.position = "none",
-    axis.text.x = element_blank(),
-    axis.text.y = element_blank(),
-    strip.text = element_text(face = "bold", hjust = 0.01, vjust = 4),
-    axis.title.x = element_text(margin = margin(t = 20)),  
-    axis.title.y = element_text(margin = margin(r = 20)) 
-  ) +
-  labs(title = "Raeubertochter")
-
-
-### Donner
-p_raw_donner <- ggplot() +
-  geom_sf(data = outline, alpha = 0) +
-  geom_sf(data = donner_raw, aes(color = "red"), size = 0.6) +
-  coord_sf(datum = st_crs(2056)) +
-  labs(x = "E",
-       y = "N") +
-  theme_minimal() +
-  theme(
-    legend.position = "none",
-    axis.text.x = element_blank(),
-    axis.text.y = element_blank(),
-    strip.text = element_text(face = "bold", hjust = 0.01, vjust = 4),
-    axis.title.x = element_text(margin = margin(t = 20)),  
-    axis.title.y = element_text(margin = margin(r = 20)) 
-  ) +
-  labs(title = "Donner")
-
-## Arrange plots together
-grid.arrange(p_raw_raeubertochter,p_raw_donner, nrow=1, ncol=2)
-
-
-```
-

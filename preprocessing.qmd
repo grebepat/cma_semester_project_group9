@@ -78,18 +78,21 @@ a_to_b <- all_routes_seg_tunnel_cor |>
 
 ## quick and dirty overview
 tmap_mode("plot")
-tm_shape(a_to_b) + 
+tm_shape(df_even) + 
   tm_dots(col = "gold", size = .25) +
   tm_layout(frame = FALSE)
 
 
 ## Get accsess to API from here, this API will later generate our alternative routes based on the start and endpoints of the deliveries
 library("hereR")
-set_key("PARpVmlSSQAeuGjMhIdg94LMi9s1ha4UShazq0j8sAo")
+set_key("qCKNngXWAlCW3GjOMYSldRSI_LwQ-O0PxOjPUuQPXgc")
 
 
 ## Create a dataframe with even rows -> ENDPOINTS
 df_even <- a_to_b[seq(2, nrow(a_to_b), by = 2), ]
+df_even <- df_even |> 
+  filter(shift == "F1")
+
 # df_even_raeubertochter <- filter(df_even, messenger == "raeubertochter")
 # df_even_donner <- filter(df_even, messenger == "donner")
 
@@ -99,6 +102,9 @@ df_even <- a_to_b[seq(2, nrow(a_to_b), by = 2), ]
 
 ## Create a dataframe with odd rows -> STARTING POINTS
 df_odd <- a_to_b[seq(1, nrow(a_to_b), by = 2), ]
+df_odd <- df_odd |> 
+  filter(shift == "F1")
+
 # df_odd_raeubertochter <- filter(df_odd, messenger == "raeubertochter")
 # df_odd_donner <- filter(df_odd, messenger == "donner")
 
@@ -107,7 +113,7 @@ df_odd <- a_to_b[seq(1, nrow(a_to_b), by = 2), ]
 testruns <- nrow(df_even)
 
 
-alternates <- map(seq_len(testruns), function(x){
+alternates_F1 <- map(seq_len(testruns), function(x){
   alternative_lines = route(origin = df_odd[x,], destination = df_even[x,], transport_mode = "bicycle", traffic = FALSE, results = 7 , routing_mode = "short")
   Sys.sleep(1.2)
   segment_id = df_even$segment_id_cor[x]
@@ -115,13 +121,19 @@ alternates <- map(seq_len(testruns), function(x){
   alternative_lines
 })
 
+save(alternates_F1, file = "alternates_F1.rda")
+
+load("alternates.rda")
+
+
+alternates2[[1]]
+
+df <- enframe(alternates_F1)
+df <-  st_as_sf(do.call(rbind, alternates_F1))
+
 
 
 ## Transform alternative in spatial point dataframe
-df <- enframe(alternates)
-df <-  st_as_sf(do.call(rbind, alternates))
-
-
 merged_dataset <- df |> 
   group_by(segment_id, rank) |> 
   summarise(geometry = sf::st_union(geometry))
@@ -134,14 +146,14 @@ alternative <- merged_dataset |>
   mutate(
     segment_id = as.factor(segment_id),
     rank = as.factor(rank)
-  )
+)
 
 
 ## drop height information, well add id back later via dhm25
 alternative <- st_zm(alternative, drop = TRUE)
 
 # save robject
-save(alternative, file = "alternative.rda")
+save(alternative, file = "rda_files/alternative.rda")
 
 
 ```
@@ -171,8 +183,7 @@ p_raw_raeubertochter <- ggplot() +
   theme(
     legend.position = "none",
     axis.text.x = element_text(angle = 90)
-  ) +
-  labs(title = "Raeubertochter")
+  ) 
 
 ggsave(plot = p_raw_raeubertochter, "figures/raeubertochter_raw.png", width = 100, height = 100, dpi = 250, units = "mm")
 
@@ -188,8 +199,7 @@ p_raw_donner <- ggplot() +
   theme(
     legend.position = "none",
      axis.text.x = element_text(angle = 90)
-  ) +
-  labs(title = "Donner")
+  ) 
 
 
 ggsave(plot = p_raw_donner, "figures/donner_raw.png", width = 100, height = 100, dpi = 250, units = "mm")
