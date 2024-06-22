@@ -6,22 +6,21 @@ date: "18.06.2024"
 format: 
   html:
     code-fold: true
+    toc: true
+    toc-location: left
+lang: en  
+bibliography: bibliography.bib
 execute:
   warning: false
   message: false
   cache:   true
-lang: en  
-bibliography: bibliography.bib
+  echo:    false
+  output:  false
 ---
 
 # Install Packages
 
 ```{r install required packages}
-
-#| echo: false
-#| warning: false
-#| message: false
-#| results: 'hide'
 
 options(repos = c(CRAN = "https://cran.rstudio.com"))
 
@@ -57,7 +56,8 @@ p_install("grid", force = FALSE)
 p_install("raster", force = FALSE)
 p_install("gridExtra", force = FALSE)
 p_install("RColorBrewer", force = FALSE)
-
+p_install("ggridges", force = FALSE)
+p_install("agricolae", force = FALSE)
 
 ```
 
@@ -66,11 +66,8 @@ p_install("RColorBrewer", force = FALSE)
 Load necessary libraries
 
 ```{r load necessary libraries}
+#| echo: true
 
-#| echo: false
-#| warning: false
-#| message: false
-#| results: 'hide'
 
 library("ggh4x")
 library("dplyr")
@@ -92,6 +89,8 @@ library("png")
 library("gridExtra")
 library("RColorBrewer")
 library("purrr")
+library("ggridges")
+library("agricolae")
 
 
 ```
@@ -101,11 +100,7 @@ library("purrr")
 Import gps data from bike messengers
 
 ```{r import raw gps data}
-
-#| echo: false
-#| warning: false
-#| message: false
-#| results: 'hide'
+#| echo: true
 
 
 ## generate a list of all filenames including the path from the subfolder they are stored in
@@ -144,7 +139,7 @@ single_routes <- purrr::map(file, process_file)
 
 
 ## Combine all results
-all_routes <- do.call(rbind, single_routes)
+all_routes <- reduce(single_routes, bind_rows)
 save(all_routes, file = "rda_files/all_routes.rda")
 
 
@@ -157,16 +152,26 @@ save(donner_raw, file = "rda_files/donner_raw.rda")
 
 
 ## Our raw data covers one shift per messenger, a total of 11'699 fixes were recorded:
-### raeubertochter: 23.10.2023, 12:59:44 - 17:51:21, 7102 fixes
-### donner: 30.01.2024, 10:21:41 - 22:14:27, 4597 fixes
+
+### raeubertochter: 23.10.2023, 12:59:44 to 06.05.2024, 18:16:19, 654554 fixes
+### donner: 01.09.2022, 09:39:33 to 20.02.2024 20:55:54, 167216 fixes
 
 ```
 
-::: {#fig-raw_data layout-ncol="2"}
-![Räubertochter](figures/raeubertochter_raw.png) ![Donner](figures/donner_raw.png)
+
+
+
+::: {#fig-raw_data layout-ncol=2}
+
+![Räubertochter](figures/raeubertochter_raw.png){#fig-raeubertochter_raw}
+
+![Donner](figures/donner_raw.png){#fig-donner_raw}
 
 RAW DATA
+
 :::
+
+
 
 # Task 2: Import Spatial Data
 
@@ -174,10 +179,6 @@ Import spatial data. Geopackage was preprocessed using Quantum GIS Version 3.34.
 
 ```{r import spatial data}
 
-#| echo: false
-#| warning: false
-#| message: false
-#| results: 'hide'
 
 ## All Spatial Data is stored in a geopackage called basic_data. Basic_data consists of several layers such as the street network, surface type or housing footprint. The layers were preprocessed and cliped to the extent of the city outline of zurich using Quantum GIS Version 3.34.5
 
@@ -241,43 +242,40 @@ all_routes <- all_routes |>
 
 ## How do the time difference differ between messengers?
 all_routes |> 
-  group_by(id) |> 
+  group_by(messenger) |> 
   filter(time_difference <= 30) |> # remove outliers to get a clearer view on the average sampling interval
   summarise(
     mean <- mean(time_difference, na.rm = T)
     )
 
+## donner: 2.91, raeubertochter: 1.04
 ## Both with similar time difference between fixes, raeubertochter with slightly shorter intervals
 
-
-## max value between two fixes, in min
-max(all_routes$time_difference, na.rm = T) / 60
-
-## max time difference at 50min
 
 ```
 
 Visualize sampling interval
 
 ```{r visualize sampling intervals via ggplot}
-
-
+#| echo: true
+#| output: true
 
 ## Quick overview how time differences distribute
 p_sampling_interval <- ggplot(all_routes, aes(x = time_difference)) +
-  geom_histogram(binwidth = 0.25, col = "white", fill = "grey25") +
-  scale_y_log10() +
-  scale_x_log10() +
+  geom_histogram(binwidth = .25, col = "white", fill = "grey25") +
+  scale_y_log10(labels = ~ format(.x, scientific = FALSE)) +
+  scale_x_log10(labels = ~ format(.x, scientific = FALSE)) +
   labs(x = "Time Difference in sec. (Log Scale)", y = "Count (Log Scale)") +
   ggtitle("Histogram of Time Differences with Log Y Axis and Log X Axis") +
-  facet_wrap(all_routes$id) +
+  facet_wrap(all_routes$messenger) +
   theme_minimal()
 
 
 ## show histogram
 print(p_sampling_interval)
 
-# Both with similar but slightly different sampling regimes, raeubertochter with an intervall of ~1 second. It seems that static time is already removed in here dataset -> strava data! Most time differences between 1 and 10 seconds, some outliers at more than 1000 seconds
+
+# Both with similar but slightly different sampling regimes, raeubertochter with an intervall of ~1 second. It seems that static time is already removed in here dataset -> strava data! Most time differences between 1 and 10 seconds, some outliers at more than 1000 seconds, mut most of the points within 10s
 
 # Donner with more variation between fixes, but still short intervals, might need another segmentation...
 
@@ -286,6 +284,7 @@ print(p_sampling_interval)
 # Task 4: From Dots to Drops: Segmenting GPS Fixes into Deliveries
 
 ```{r segmenting deliveries}
+#| echo: true
 
 ## For seperating the gps data into different segments, we analyse time differences between them. As strava data already removes most of the static points we're in no need to calculate mean_step's but can solely relay on big time gaps.
 
@@ -354,8 +353,8 @@ all_routes_seg |>
   group_by(messenger) |> 
   summarise(length(unique(segment_id)))
 
-## donner with 36 deliveries
-## raeubertochter with 22 deliveries
+## donner with 1162 deliveries
+## raeubertochter with 1662 deliveries
 
 
 ## filter segments according to messenger
@@ -371,16 +370,11 @@ save(donner_seg, file = "rda_files/donner_seg.rda")
 # Task 5: Lost in Transit: Tackling Tunnel GPS Blackouts for Bike Messenger
 
 ```{r tackling tunnel gps blackouts}
+#| echo: true
+
 
 ## problem: we loose GPS signal in the bicycle tunnel from Enge to Sihlhölzli. Our segmentation splits the trajectories into two separate deliveries, even though it's the same route. We try to recognize split segments that we're falsely segmented:
 all_routes_seg_tunnel <- all_routes_seg
-
-
-## extract first and last points of each segment
-first_last_points <- all_routes_seg_tunnel |> 
-  group_by(segment_id) |> 
-  slice(c(1, n())) |> 
-  ungroup()
 
 
 ## Create entry and exit points at the tunnel. For future project, there might be a data set with tunnel entities, where we could extract the entry and exit points automatically
@@ -394,35 +388,53 @@ buffer_entry <- st_buffer(tunnel_entry, dist = 50)
 buffer_exit <- st_buffer(tunnel_exit, dist = 50)
 
 
-## Identify segments within the buffer
-first_last_points_within <- first_last_points |> 
+
+segment_endpoints <- all_routes_seg_tunnel %>%
+  group_by(segment_id) %>%
+  summarize(start_point = first(geometry), end_point = last(geometry))
+
+# Check intersection with buffers
+segment_endpoints <- segment_endpoints %>%
   mutate(
-    intersect_start = sapply(st_intersects(geometry, buffer_entry, sparse = FALSE), any),
-    intersect_end = sapply(st_intersects(geometry, buffer_exit, sparse = FALSE), any)
-  ) |> 
-  filter(intersect_start | intersect_end)
+    end_in_entry_buffer = st_intersects(end_point, buffer_entry, sparse = FALSE),
+    start_in_exit_buffer = st_intersects(start_point, buffer_exit, sparse = FALSE)
+  )
+
+# Compare adjacent segment IDs
+matched_segments <- segment_endpoints %>%
+  arrange(segment_id) %>%
+  mutate(same = (end_in_entry_buffer == TRUE & lead(start_in_exit_buffer) == TRUE) | (start_in_exit_buffer == TRUE & lag(end_in_entry_buffer) == TRUE))
+
+# Filter segments where endpoints are in the respective buffers and segment IDs follow each other
+wrong_segments <- matched_segments |> 
+  filter(same == TRUE) |> 
+  select(segment_id, same) |> 
+  st_drop_geometry()
 
 
-## Calculate time difference between end of one segment and start of the next
-first_last_points_within <- first_last_points_within |> 
-  arrange(segment_id, time) |> 
-  mutate(time_diff = time - lag(time))
+wrong_segments$new_segment_id <- NA
+
+for (i in seq(1, nrow(wrong_segments), by = 2)) {
+  wrong_segments$new_segment_id[i:(i + 1)] <- wrong_segments$segment_id[i]
+}
 
 
-## Match segments where time difference is less than 2 minutes -> falsely separated segments!
-matched_segments <- first_last_points_within |> 
-  filter(time_diff <= 120 | is.na(time_diff) ) |> 
-  mutate(new_segment_id = lag(segment_id)) |> 
-  select(x,y,geometry,time_diff, segment_id, new_segment_id)
 
-## recognize start- and endpoints of segments that lay within the buffer and are only separated by 2 minutes
+
+
+
+
+
+
+
+
+
 
 ########## FOR FUTURE PROJECTS -> try to implement matching via segment_id, not time difference! If we make the assumption that we separate trajectories in the tunnel, we can assume that falsely separated segments follow each other. Segments were falsely separated when an endpoint of segment_id 13 and a starting point of segment_id 14 lay within the corresponding buffers. Would be a much cleaner approach! 
 
 
 ## create a table with falsely seperated segment_id's
-lookup_table <- matched_segments |> 
-  filter(!is.na(new_segment_id) & segment_id != new_segment_id) |> # filter rows where new and old segment_id's do not match
+lookup_table <- wrong_segments |> 
   select(segment_id, new_segment_id)  |> 
   distinct() # replace duplicates
 
@@ -461,8 +473,8 @@ all_routes_seg_tunnel_cor |>
 save(all_routes_seg_tunnel_cor, file = "rda_files/all_routes_seg_tunnel_cor.rda")
 
 
-## donner with 36 deliveries
-## raeubertochter with 21 deliveries
+## donner with 1162 deliveries
+## raeubertochter with 1657 deliveries
 
 
 ## seperate into raeubertochter and save for later visualization in preprocessing.qmd
@@ -574,6 +586,7 @@ filtered_df <- combined |>
 # Task 8: Map Matching
 
 ```{r map matching based on Nils method}
+#| echo: true
 
 ## since we want to find the closest location on the road over ALL roads
 ## we need to create a union of the roads first.
@@ -605,7 +618,8 @@ save(filtered_df, file = "rda_files/filtered_df.rda")
 # Problem: Uneven distribution of data points between original and alternative
 
 ```{r uneven distribution gps fixes}
-
+#| echo: true
+#| output: true
 
 ## We encounter the problem, that our alternative routes consist of two to three times less data points as our original routes. The denser sampling intervals in our original routes could lead to uneven calculations. For example, smaller intervals could detect more differences in height/slope than the wider sampling interval in the alternative routing
 
@@ -644,6 +658,8 @@ ggplot(overview) +
 # Task 9: Interpolating Data Frame
 
 ```{r Interpolating trajectories}
+#| echo: true
+
 
 ## Because of the uneven distribution, we decided to interpolate along the original and alternative trajectories
 
@@ -715,7 +731,9 @@ save(df_single_points, file = "rda_files/df_single_points.rda")
 
 # Task 9: Enrich network
 
-```{r}
+```{r enricht trajectory network}
+#| echo: true
+
 
 ## We work with 52 trajectories (donner: 33 / raeubertochter: 19)
 # Enrich combined dataset with street and environmental data
@@ -873,7 +891,7 @@ Adjust this table after each cycle...
 | height up                 | \[m\] | 0.68     | 19.4  | 87.7  | 0.78        | 19.1  | 83.1  |
 | height down               | \[m\] | -0.25    | -18.9 | -67.2 | -0.39       | -19.1 | -61.9 |
 
-```{r}
+```{r descriptive analysis}
 
 ## Descriptive analysis - segment length
 new |> 
@@ -930,7 +948,7 @@ results |>
 
 ## Task 10.1: Segment length
 
-```{r}
+```{r segment length}
 
 
 ## Comparison of length
@@ -939,7 +957,7 @@ length_comp <- new |>
 
 
 df_spread <- length_comp |> 
-  group_by(type, segment_id, rank) |> 
+  group_by(type, messenger, segment_id, rank) |> 
   summarise(
     tot_travel = mean(tot_segment_length)
   ) |> 
@@ -947,8 +965,68 @@ df_spread <- length_comp |>
     rank = factor(rank, levels = c(0,1,2,3,4,5,6,7))
   )
 
+## How differ segment length between messengers? only original routes considered
 
-comparison <- df_spread |> 
+df_spread_original <- df_spread |> 
+  filter(type == "original")
+
+
+ggplot(df_spread_original, aes(x = messenger, y = tot_travel, fill = messenger,   alpha = 0.75)) +
+  geom_boxplot() +
+   labs(x = "segment type", y = "total segment length") +
+  scale_fill_manual(values = c("#11E2A1","#9E1FA2")) +
+   theme_classic() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "")
+
+
+
+## How do segment lengths differ in contrast to alternatives? 
+
+ggplot(df_spread, aes(x = messenger, y = tot_travel, fill = type,   alpha = 0.75)) +
+  geom_boxplot() +
+   labs(x = "segment type", y = "total segment length") +
+  scale_fill_manual(values = c("#11E2A1","#9E1FA2")) +
+   theme_classic() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "")
+
+
+# We see that they differ slightly, raeubertochter more than donner.. but how?
+
+
+## Are there differences between shortest route generated and route choosen?
+comparison1 <- df_spread |> 
+  st_drop_geometry() |> 
+  filter(rank == 0 | rank == 1) |> 
+  group_by(segment_id, rank) |> 
+  summarise(mean = mean(tot_travel)) |> 
+  spread(key = rank, value = mean) |> 
+  rename("original" = "0" , "alternative1" = "1")
+
+comp <- pivot_longer(comparison1, -segment_id)
+
+ggplot(comp, aes(x = name, y = value, fill = name,   alpha = 0.75)) +
+  geom_boxplot() +
+   labs(x = "segment type", y = "total segment length") +
+  scale_fill_manual(values = c("#11E2A1","#9E1FA2")) +
+   theme_classic() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "")
+
+
+t.test(comparison1$original, comparison1$alternative1, paired = T)
+
+
+## Calculate percentage of shortest route messengers vs. alternatives
+
+comparison2 <- df_spread |> 
   group_by(segment_id) |> 
   summarise(shorter = min(tot_travel[rank == 0]) < min(tot_travel[rank != 0]))
 
@@ -965,12 +1043,56 @@ percentage <- (shorter_count / total_segments) * 100
 
 ## alternatives and originals almost 50/50. But original mean tot_segment_length 100m shorter than alternative. Alternative routing based on shortest routes... 
 
+# mean difference between original route and shortest generated route at 31.8m # in 40% of the times, original was still shortest! so basically no difference between shortest route generated and choosen route!
 
-?scale_fill_manual()
+
+# So we see slight differenc ebetween messengers, but also that alternatives and originals differ. Alternative 1 does not, but overall does, we have to take a look at this..
+
+## But what about rank's? Do more alternatives make sense? or do they change output?
 
 
-## visualize t.test
-ggplot(df_spread, aes(x = rank, y = tot_travel, fill = type, alpha = 0.75)) +
+lm = aov( tot_travel ~ rank, data = df_spread)
+
+par(mfrow = c(2, 2))
+plot(lm)
+ 
+
+## Keine signifikante Interaktion zwischen rank und messenger, daher Interaktion raus und alles nochmals laufen lassen
+
+
+
+summary(lm)
+summary.lm(lm)  
+summary.aov(lm)
+TukeyHSD(lm)
+HSD.test(lm, "rank", console=TRUE)
+
+
+
+
+
+
+## Very interesting, our multifacotrial anova is significant, we see that messenegers and ranks differ significantly. But we also se
+
+
+# mit jitterpunkten
+
+
+ggplot(df_spread, aes(x = rank, y = tot_travel, fill = type)) +
+ geom_jitter(aes(colour = tot_travel)) +
+  geom_boxplot(alpha = 0.75) +
+   labs(x = "trajectory type", y = "total segment length") +
+  scale_fill_manual(values = c("#11E2A1","#9E1FA2")) +
+    scale_color_gradient(low = "gray", high = "black") +  # Color gradient for jittered points
+   theme_classic() +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(title = "")
+
+
+## visualize anova
+ggplot(df_spread, aes(x = rank, y = tot_travel, fill = type,  alpha = 0.75)) +
   geom_boxplot() +
    labs(x = "segment type", y = "total segment length") +
   scale_fill_manual(values = c("#11E2A1","#9E1FA2")) +
@@ -980,18 +1102,17 @@ ggplot(df_spread, aes(x = rank, y = tot_travel, fill = type, alpha = 0.75)) +
   ) +
   labs(title = "")
 
-
-# 24 von 57 ids, original was shortest.. im mean 400m kürzer
-
+## ANOVA is significant, but no pairwise difference recognised, Original vs. A5 almost significant. Trend is here, with every alternative, segment_length() gets longer..
 
 ```
 
 ## Task 10.2: width
 
-```{r}
+```{r width}
 
 
-width_preference <- new |> 
+width_preference <- new |>
+  st_drop_geometry() |> 
   group_by(type, segment_id, rank, width) |> 
   summarise(
     sum = sum(travel_dist, na.rm = T)
@@ -1017,44 +1138,173 @@ complete_df[is.na(complete_df)] <- 0
 
 
 
-##
-width_preference <- complete_df |> 
+
+width_preference2 <- complete_df |> 
    group_by(type, segment_id, rank) |>
   mutate(
     width = width,
+    sum = as.numeric(sum),
     n = n(),
     tot = sum(sum),
-    perc = (sum / tot) * 100,
+    perc = (sum / tot) * 100
+  ) |> 
+  na.omit()
+
+
+
+width_preference2 <- width_preference2 |> 
+   group_by(type, segment_id, rank) |>
+  mutate(
     sum_tot = sum(perc)
+  )
+
+
+choice_avg <- width_preference2 |> 
+   group_by(type, segment_id, width) |>
+ summarise(
+   mean_perc = mean(perc)
   ) 
 
 
 
-# Preference$width <- factor(width_preference$width, levels = sort(as.numeric(levels(width_preference$width))))
-# 
-ggplot(width_preference) +
- geom_boxplot(aes(x = width, y = sum, fill = rank))
+all_together <- choice_avg |> 
+  group_by(type, width) |> 
+   summarise(
+   mean_perc = mean(mean_perc)
+  ) 
+
+
+spread <- spread(all_together, key = type, value = mean_perc)
+spread$diff <- spread$original - spread$alternative
 
 
 
-ggplot(width_preference) +
-  geom_bar(aes(x = width, y = perc, fill = type), stat = "identity", position = "dodge", width = 0.75, alpha = 0.5) +
-  scale_fill_manual(values = c("#11E2A1","#9E1FA2")) +
+
+spread <- spread[order(spread$diff),]
+spread$width <- factor(spread$width, levels = spread$width,
+                       labels = c("1m Strasse", "6m Strasse", "8m Strasse",
+                                  "4m Strasse", "2m Strasse", "3m Strasse"))
+
+
+ggplot(spread, aes(x = width, y = diff)) +
+  geom_segment(aes(x = width, xend = width, y = 0, yend = diff), color = "grey60", lwd = 1.5) +
+  geom_point(size = 5, pch = 21, bg = "#9E1FA2", color = "#9E1FA2") +
   coord_flip() +
   theme_minimal() +
-  labs(x = "street width [m]", y = "percentage [%]", fill = "Type") +
+  labs(
+    y = "  ←   Less Preferred   |  Preferred   →",
+    x = ""
+  ) +
   theme(
-    axis.title.y = element_text( margin = margin(t = 0, r = 15, b = 0, l = 0)),
-        axis.title.x = element_text( margin = margin(t = 10, r = 0, b = 0, l = 0))
+    axis.text.x = element_blank()
   )
-
-
-
-?geom_bar
+ 
 
 ```
 
 ## Task 10.3: Slope
+
+```{r}
+
+# max averae slope per 100m
+# mean average_slope per 100m
+
+
+# counts per category / m per categor
+
+
+
+
+
+
+
+slope <- new %>%
+  group_by(type, segment_id, rank, index) %>%
+  na.omit() |> 
+  summarise(
+    n = n(),
+     mean_slope_up = mean(ifelse(slope_calc > 0, slope_calc, 0), na.rm = TRUE),
+    max_slope_up = max(ifelse(slope_calc > 0, slope_calc, 0), na.rm = TRUE),
+      mean_slope = mean((slope_calc), na.rm = TRUE),
+     max_slope = max((slope_calc), na.rm = TRUE))
+
+
+
+
+
+
+
+
+
+
+
+# density plot of the results
+results1 <- results %>%
+  group_by(type, segment_id) %>%
+  filter(mean_slope100 == max(slope_up))
+
+
+ggplot(slope, aes(x=mean_slope_up, fill= type)) +
+  geom_density(alpha = 0.4, stat = "density") +
+ theme_minimal()
+
+?geom_density
+
+ggplot(slope, aes(x=mean_slope_up, fill= type)) +
+  geom_histogram(alpha = 0.4, binwidth = 0.25) +
+ theme_minimal()
+
+
+# slope$rank <- factor(slope$rank, labels = c("Original", "A1", "A2", "A3", "A4", "A5", "A6", "A7"))
+
+
+# ggplot(slope, aes(x=max_slope_up, fill= type)) +
+#   geom_density(alpha = 0.75) +
+#    scale_fill_manual(values =c("#11E2A1","#9E1FA2")) +
+#  theme_minimal()
+# 
+# 
+# ggplot(slope_vis, aes(x=max_slope_up, y = type)) +
+#   geom_density_ridges(aes(fill = type),alpha = 0.75) +
+#    scale_fill_manual(values =c("#11E2A1","#9E1FA2")) +
+#  theme_minimal()
+
+
+slope$rank <- factor(slope$rank, levels = c("Original", "A1", "A2", "A3", "A4", "A5", "A6", "A7"))
+
+
+
+slope_vis <- slope |> 
+  filter(mean_slope_up < 10)
+
+slope_vis2 <- slope |> 
+  filter(max_slope_up < 30)
+
+
+
+ggplot(slope_vis, aes(x = mean_slope_up, y = rank, height = ..density..)) +
+  geom_density_ridges(aes(fill = rank), alpha = 0.75, stat = "density") +
+  scale_fill_manual(values =c("#9E1FA2","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1")) +
+ theme_minimal() +
+  theme(
+    legend.position = "none"
+  )
+
+
+
+ggplot(slope_vis2, aes(x = max_slope_up, y = rank, height = ..density..)) +
+  geom_density_ridges(aes(fill = rank), alpha = 0.75, stat = "density") +
+  scale_fill_manual(values =c("#9E1FA2","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1")) +
+ theme_minimal() +
+  theme(
+    legend.position = "none"
+  )
+
+
+
+```
+
+
 
 
 # Project work
