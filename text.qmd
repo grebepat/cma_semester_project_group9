@@ -88,3 +88,5 @@ One problem that comes with using an algorithm to generate alternative trajector
 
 ::: {#refs}
 :::
+=======
+### Limitations in generating alternative trajectories

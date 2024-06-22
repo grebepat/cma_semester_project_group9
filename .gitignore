@@ -7,3 +7,6 @@ data/
 .Rproj.user
 .rda/
 figures/
+rda_files/
+index_files/
+index_cache/
