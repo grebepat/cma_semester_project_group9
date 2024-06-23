@@ -1201,7 +1201,7 @@ mean_slope_up <-  ggplot(slope_vis, aes(x = mean_slope_up, y = rank1, height = .
   scale_fill_manual(values =c("#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#9E1FA2")) +
  theme_minimal() +
     labs(
-    x = "mean positive slope over 100 m subsegments [%]"
+    x = "mean positive slope per 100m subsegments [%]"
   ) +
   theme(
     legend.position = "none",
@@ -1218,7 +1218,7 @@ max_slope_up <- ggplot(slope_vis2, aes(x = max_slope_up, y = rank1, height = ..d
 scale_fill_manual(values =c("#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#9E1FA2")) +
  theme_minimal() +
    labs(
-    x = "max positive slope over 100 m subsegments [%]") +
+    x = "max positive slope per 100m subsegments [%]") +
   theme(
     legend.position = "none",
     axis.title.x = element_text(margin = margin(t = 20)),
@@ -1263,7 +1263,7 @@ slope_final <- slope_sum |>
 slope_category <- ggplot(slope_final, aes(x = name, y = mean_count, fill = type,   alpha = 0.75)) +
   geom_boxplot() +
   scale_y_log10() +
-   labs(y = "mean count per segment (Log Scale)",
+   labs(y = "mean count of subsegments per delivery (Log Scale)",
         x = "slope categories") +
   scale_fill_manual(values = c("#11E2A1","#9E1FA2")) +
    theme_classic() +

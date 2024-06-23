@@ -953,7 +953,7 @@ As shown in @tbl-letters, the original routes are on average shorter compared to
 
 For height_up and height_down, cumulative elevation differences between points were calculated, with positive values summarized in height_up and the negative values summarized in height_down. The elevation differences are comparable for both types (original and alternative), with alternatives handling about 4.7 meters more in elevation gain/loss per segment.
 
-To compare the slope between the two types, all segments were divided into subsegments of 100 meters in length. Subsequently, average and maximum slope in these subsegments were calculated for every delivery. The average slope in these subsegments is 0.03% for originals and 0.02% for alternatives. The steepest 100-meter subsegment was driven in an original segment and reached 12.3%.
+To compare the slope between the two types, all trajectories were divided into subsegments of 100 meters in length. Subsequently, average and maximum slope in these subsegments were calculated for every delivery. The average slope in these subsegments is 0.03% for originals and 0.02% for alternatives. The steepest 100-meter subsegment was driven in an original segment and reached 12.3%.
 
 ```{r descriptive analysis}
 #| echo: true
@@ -1135,14 +1135,14 @@ Difference in segment lengths by original routes and all alternatives
 ::: {#fig-shortest layout-ncol="1"}
 ![](figures/shortest.png){.lightbox}
 
-Difference in segment lengths by original and shortest alternative
+Difference in segment lengths by original and shortest alternative A1
 
 :::
 
 ### Street width
-Next, we investigated whether certain types of streets were preferred by the messengers based on street width. Since there is no clear procedure for evaluating preferences, we developed an own approach.In each segment, we calculated the share of the different street widths (1, 2, 3, 4, 6, and 8 meters wide) in contrast to the segment length. For each segment (original and alternative) we get percentages on how much a certain street width was used. We then combined the calculated percentage values for all alternatives per segment. For each segment, we obtained a single alternative that summarizes the shares based on street width (see output tibble). This average alternative can then be compared with the actual route taken by the messengers. 
+Next, we investigated whether certain types of streets were preferred by the messengers based on street width. Since there is no clear procedure for evaluating preferences, we developed an own approach. In each segment, we calculated the share of the different street widths (1, 2, 3, 4, 6, and 8 meters wide) in contrast to the segment length. For each segment (original and alternative) we get percentages on how much a certain street width was used. We then combined the calculated percentage values for all alternatives per segment. For each segment, we obtained a single alternative that summarizes the shares based on street width. The output tibble shows alternative 1 of segment 1 with its street width percentages. This average alternative can then be compared with the actual route taken by the messengers. 
 
-This approach reveals clear preferences or aversions among three street widths. Narrow streets (1 meter wide) are clearly avoided by bike messengers compared to the average alternative, while streets two to three meters wide are clearly preferred @fig-preference.
+This approach reveals clear preferences or aversions among three street widths. Narrow streets (1 meter wide) are clearly avoided by bike messengers compared to the average alternative, while street widths of two to three meters are clearly preferred @fig-preference.
 
 ```{r width}
 #| echo: true
@@ -1239,6 +1239,8 @@ Preferred street widths by messengers compared to mean street widths of all alte
 
 ### Slope
 
+Lastly, we analyzed how slope differs between original and alternative routes. Similar to @broach2012cyclists, we categorized all 100m subsegments into three different slope categories of 2-4%, 4-6% and >6%. We then calculated mean counts per trajectory to see, if the amount of subsegments within the categories differ between original and alternative routes. We see, that the categories differ slightly (e.g. 2-4% and >6%), but no real difference between original and alternative routes can be distinguished @fig-slope_cat. However, there is a marginal trend to higher amounts of steep subsegments in original routes visible. 
+
 ```{r slope}
 #| echo: true
 
@@ -1272,9 +1274,6 @@ slope_result <- slope |>
     kat3 = sum(mean_slope_up > 6)
       )
 
-
-
-
 slope_sum <- pivot_longer(slope_result, -c(type, segment_id, rank))
 
 slope_sum$name <- factor(slope_sum$name, levels = c("kat1", "kat2", "kat3"), labels = c("2-4%", "4-6%", ">6%"))
@@ -1287,10 +1286,18 @@ slope_final <- slope_sum |>
 
 ```
 
-::: {layout-nrow="2"}
-![mean bebe](figures/mean_slope_up.png){.lightbox}
+::: {#fig-slope_cat layout-ncol="1"}
+![](figures/category.png){#fig-category .lightbox}
 
-![max bebe](figures/max_slope_up.png){.lightbox}
+Average number of 100m subsegment per delivery with slopes of 2-4%, 4-6% or >6% 
+:::
+
+We further calculated mean slope and maximum slope per subsegment of 100m in each trajectory and created density plots for a better oversight @fig-slope_density. X-Axis show densities of subsegments while the Y-Axis show mean/max slope in 100m segments in %. No statistical method was applied regarding slope.
+
+::: {#fig-slope_density layout-nrow="2"}
+![mean positive slope per 100m subsegments](figures/mean_slope_up.png){.lightbox}
+
+![max positive slope per 100m subsegments](figures/max_slope_up.png){.lightbox}
 
 Mean and Max slopes averaged in 100 meter subsegment
 :::
@@ -1300,6 +1307,18 @@ Mean and Max slopes averaged in 100 meter subsegment
 machen Höhenunterschiede / Slope überhaupt viel Sinn bei routen die in einem so kleinen spatial context konentriert sind? Es gibt de fakto keine Möglichkeiten den Uetli- oder Züroiberg zu Umfahren, die Messengers aber auch alternativen sind gezwungen die gleichen Höhenunterschiede zu fahren. Vielleicht macht es hier mehr sinn in einen grsseren spatial context zu gehen, wo hügel umfahren werden können?
 
 # Limitations / Outlook
+
+### Map matching sucks
+
+due to certain constraints and available resources, we adopted a simple approach of distance-based point-to-road matching, which has been identified with several limitations [@meister_descriptive_2021]. More sophisticated methods, such as the one proposed by @newson2009hidden that employs Hidden Markov Models (HMMs), are more effective as they consider factors like measurement noise and the structure of the road network, thereby avoiding the simplistic distance-based point-to-road matching. For implementing map matching in intricate urban road networks, it's crucial to use map matching tools that consider various sources of error linked with position sensors, the vehicle's historical trajectory, topological data about the road network (for instance, link connectivity and alignment), and the vehicle's direction and speed. These factors collectively help in accurately determining the correct link where the vehicle is located [@ochieng_map-matching_2003].
+
+### Critical reflection
+
+Uneven distributions - interpolation. Too many data points in one sample AND irregular sampling as a challenge. Perhaps the most widely used approach is to transform unevenly spaced data into equally spaced data using some form of interpolation. Transforming data with linear interpolation, however, can have significant drawbacks, such as bias, data loss or dilution [@eckner_framework_2014]. However, when applied to our specific data and the research question to be answered, these concerns were considered reasonable.
+
+### Approach in generating alternative trajectories
+
+One problem that comes with using an algorithm to generate alternative trajectories is the creation of a share of unreasonable trajectories. One has to consider this source of error as the aim is to create trajectories that represent plausible alternatives. Thus research is aimining to improve network-based automatic calibration of the \`\`doubly stochastic” method of @Hood2012. This method produces more heterogeneous, attractive, unbiased, and exhaustive choice sets than other methods, yielding more reliable parameter estimates and predictions.
 
 ### Wordcount
 

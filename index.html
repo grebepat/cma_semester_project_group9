@@ -1195,7 +1195,7 @@ Figure&nbsp;8: Difference between raw dataset (a) and interpolated version of me
 <h3 class="anchored" data-anchor-id="descriptive-analysis">Descriptive Analysis</h3>
 <p>As shown in <a href="#tbl-letters" class="quarto-xref">Table&nbsp;1</a>, the original routes are on average shorter compared to the alternatives. With an average segment length of 2229 meters, 385 meters are <em>saved</em> per delivery. The longest original segment in Shift <code>F1</code> is a delivery of 4039 meters.</p>
 <p>For height_up and height_down, cumulative elevation differences between points were calculated, with positive values summarized in height_up and the negative values summarized in height_down. The elevation differences are comparable for both types (original and alternative), with alternatives handling about 4.7 meters more in elevation gain/loss per segment.</p>
-<p>To compare the slope between the two types, all segments were divided into subsegments of 100 meters in length. Subsequently, average and maximum slope in these subsegments were calculated for every delivery. The average slope in these subsegments is 0.03% for originals and 0.02% for alternatives. The steepest 100-meter subsegment was driven in an original segment and reached 12.3%.</p>
+<p>To compare the slope between the two types, all trajectories were divided into subsegments of 100 meters in length. Subsequently, average and maximum slope in these subsegments were calculated for every delivery. The average slope in these subsegments is 0.03% for originals and 0.02% for alternatives. The steepest 100-meter subsegment was driven in an original segment and reached 12.3%.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -1438,20 +1438,20 @@ Figure&nbsp;10: Difference in segment lengths by original routes and all alterna
 <div aria-describedby="fig-shortest-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="quarto-layout-row">
 <div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: flex-start;">
-<a href="figures/shortest.png" class="lightbox" data-gallery="quarto-lightbox-gallery-19" title="Figure&nbsp;11: Difference in segment lengths by original and shortest alternative"><img src="figures/shortest.png" class="img-fluid figure-img"></a>
+<a href="figures/shortest.png" class="lightbox" data-gallery="quarto-lightbox-gallery-19" title="Figure&nbsp;11: Difference in segment lengths by original and shortest alternative A1"><img src="figures/shortest.png" class="img-fluid figure-img"></a>
 </div>
 </div>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-shortest-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11: Difference in segment lengths by original and shortest alternative
+Figure&nbsp;11: Difference in segment lengths by original and shortest alternative A1
 </figcaption>
 </figure>
 </div>
 </section>
 <section id="street-width" class="level3 page-columns page-full">
 <h3 class="anchored" data-anchor-id="street-width">Street width</h3>
-<p>Next, we investigated whether certain types of streets were preferred by the messengers based on street width. Since there is no clear procedure for evaluating preferences, we developed an own approach.In each segment, we calculated the share of the different street widths (1, 2, 3, 4, 6, and 8 meters wide) in contrast to the segment length. For each segment (original and alternative) we get percentages on how much a certain street width was used. We then combined the calculated percentage values for all alternatives per segment. For each segment, we obtained a single alternative that summarizes the shares based on street width (see output tibble). This average alternative can then be compared with the actual route taken by the messengers.</p>
-<p>This approach reveals clear preferences or aversions among three street widths. Narrow streets (1 meter wide) are clearly avoided by bike messengers compared to the average alternative, while streets two to three meters wide are clearly preferred <a href="#fig-preference" class="quarto-xref">Figure&nbsp;12</a>.</p>
+<p>Next, we investigated whether certain types of streets were preferred by the messengers based on street width. Since there is no clear procedure for evaluating preferences, we developed an own approach. In each segment, we calculated the share of the different street widths (1, 2, 3, 4, 6, and 8 meters wide) in contrast to the segment length. For each segment (original and alternative) we get percentages on how much a certain street width was used. We then combined the calculated percentage values for all alternatives per segment. For each segment, we obtained a single alternative that summarizes the shares based on street width. The output tibble shows alternative 1 of segment 1 with its street width percentages. This average alternative can then be compared with the actual route taken by the messengers.</p>
+<p>This approach reveals clear preferences or aversions among three street widths. Narrow streets (1 meter wide) are clearly avoided by bike messengers compared to the average alternative, while street widths of two to three meters are clearly preferred <a href="#fig-preference" class="quarto-xref">Figure&nbsp;12</a>.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -1561,6 +1561,7 @@ Figure&nbsp;12: Preferred street widths by messengers compared to mean street wi
 </section>
 <section id="slope" class="level3">
 <h3 class="anchored" data-anchor-id="slope">Slope</h3>
+<p>Lastly, we analyzed how slope differs between original and alternative routes. Similar to <span class="citation" data-cites="broach2012cyclists">Broach, Dill, and Gliebe (<a href="#ref-broach2012cyclists" role="doc-biblioref">2012</a>)</span>, we categorized all 100m subsegments into three different slope categories of 2-4%, 4-6% and &gt;6%. We then calculated mean counts per trajectory to see, if the amount of subsegments within the categories differ between original and alternative routes. We see, that the categories differ slightly (e.g.&nbsp;2-4% and &gt;6%), but no real difference between original and alternative routes can be distinguished <a href="#fig-slope_cat" class="quarto-xref">Figure&nbsp;13</a>. However, there is a marginal trend to higher amounts of steep subsegments in original routes visible.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -1593,46 +1594,59 @@ Figure&nbsp;12: Preferred street widths by messengers compared to mean street wi
 <span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">kat3 =</span> <span class="fu">sum</span>(mean_slope_up <span class="sc">&gt;</span> <span class="dv">6</span>)</span>
 <span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>      )</span>
 <span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>slope_sum <span class="ot">&lt;-</span> <span class="fu">pivot_longer</span>(slope_result, <span class="sc">-</span><span class="fu">c</span>(type, segment_id, rank))</span>
 <span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>slope_sum <span class="ot">&lt;-</span> <span class="fu">pivot_longer</span>(slope_result, <span class="sc">-</span><span class="fu">c</span>(type, segment_id, rank))</span>
-<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>slope_sum<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">factor</span>(slope_sum<span class="sc">$</span>name, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"kat1"</span>, <span class="st">"kat2"</span>, <span class="st">"kat3"</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"2-4%"</span>, <span class="st">"4-6%"</span>, <span class="st">"&gt;6%"</span>))</span>
-<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>slope_final <span class="ot">&lt;-</span> slope_sum <span class="sc">|&gt;</span> </span>
-<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(type, segment_id, name) <span class="sc">|&gt;</span> </span>
-<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a>      <span class="at">mean_count =</span> <span class="fu">mean</span>(value) )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>slope_sum<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">factor</span>(slope_sum<span class="sc">$</span>name, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"kat1"</span>, <span class="st">"kat2"</span>, <span class="st">"kat3"</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"2-4%"</span>, <span class="st">"4-6%"</span>, <span class="st">"&gt;6%"</span>))</span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>slope_final <span class="ot">&lt;-</span> slope_sum <span class="sc">|&gt;</span> </span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(type, segment_id, name) <span class="sc">|&gt;</span> </span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>      <span class="at">mean_count =</span> <span class="fu">mean</span>(value) )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<div>
-
-</div>
-<div class="quarto-layout-panel" data-layout-nrow="2">
+<div id="fig-slope_cat" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-slope_cat-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="quarto-layout-row">
-<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: flex-start;">
+<a href="figures/category.png" class="lightbox" data-gallery="quarto-lightbox-gallery-21" title="Figure&nbsp;13: Average number of 100m subsegment per delivery with slopes of 2-4%, 4-6% or >6%"><img src="figures/category.png" id="fig-category" class="img-fluid figure-img"></a>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-slope_cat-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;13: Average number of 100m subsegment per delivery with slopes of 2-4%, 4-6% or &gt;6%
+</figcaption>
+</figure>
+</div>
+<p>We further calculated mean slope and maximum slope per subsegment of 100m in each trajectory and created density plots for a better oversight <a href="#fig-slope_density" class="quarto-xref">Figure&nbsp;14</a>. X-Axis show densities of subsegments while the Y-Axis show mean/max slope in 100m segments in %. No statistical method was applied regarding slope.</p>
+<div id="fig-slope_density" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-slope_density-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: flex-start;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><a href="figures/mean_slope_up.png" class="lightbox" data-gallery="quarto-lightbox-gallery-21" title="mean bebe"><img src="figures/mean_slope_up.png" class="img-fluid figure-img" alt="mean bebe"></a></p>
-<figcaption>mean bebe</figcaption>
+<p><a href="figures/mean_slope_up.png" class="lightbox" data-gallery="quarto-lightbox-gallery-22" title="mean positive slope per 100m subsegments"><img src="figures/mean_slope_up.png" class="img-fluid figure-img"></a></p>
+<figcaption>mean positive slope per 100m subsegments</figcaption>
 </figure>
 </div>
 </div>
-<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: flex-start;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><a href="figures/max_slope_up.png" class="lightbox" data-gallery="quarto-lightbox-gallery-22" title="max bebe"><img src="figures/max_slope_up.png" class="img-fluid figure-img" alt="max bebe"></a></p>
-<figcaption>max bebe</figcaption>
+<p><a href="figures/max_slope_up.png" class="lightbox" data-gallery="quarto-lightbox-gallery-23" title="max positive slope per 100m subsegments"><img src="figures/max_slope_up.png" class="img-fluid figure-img"></a></p>
+<figcaption>max positive slope per 100m subsegments</figcaption>
 </figure>
 </div>
 </div>
 </div>
-<div class="quarto-layout-row">
-<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
-<p>Mean and Max slopes averaged in 100 meter subsegment</p>
 </div>
-</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-slope_density-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;14: Mean and Max slopes averaged in 100 meter subsegment
+</figcaption>
+</figure>
 </div>
 </section>
 </section>
@@ -1642,6 +1656,18 @@ Figure&nbsp;12: Preferred street widths by messengers compared to mean street wi
 </section>
 <section id="limitations-outlook" class="level1">
 <h1>Limitations / Outlook</h1>
+<section id="map-matching-sucks" class="level3">
+<h3 class="anchored" data-anchor-id="map-matching-sucks">Map matching sucks</h3>
+<p>due to certain constraints and available resources, we adopted a simple approach of distance-based point-to-road matching, which has been identified with several limitations <span class="citation" data-cites="meister_descriptive_2021">(<a href="#ref-meister_descriptive_2021" role="doc-biblioref">Meister, Gupta, and Axhausen 2021</a>)</span>. More sophisticated methods, such as the one proposed by <span class="citation" data-cites="newson2009hidden">Newson and Krumm (<a href="#ref-newson2009hidden" role="doc-biblioref">2009</a>)</span> that employs Hidden Markov Models (HMMs), are more effective as they consider factors like measurement noise and the structure of the road network, thereby avoiding the simplistic distance-based point-to-road matching. For implementing map matching in intricate urban road networks, it’s crucial to use map matching tools that consider various sources of error linked with position sensors, the vehicle’s historical trajectory, topological data about the road network (for instance, link connectivity and alignment), and the vehicle’s direction and speed. These factors collectively help in accurately determining the correct link where the vehicle is located <span class="citation" data-cites="ochieng_map-matching_2003">(<a href="#ref-ochieng_map-matching_2003" role="doc-biblioref">Ochieng, Quddus, and Noland 2003</a>)</span>.</p>
+</section>
+<section id="critical-reflection" class="level3">
+<h3 class="anchored" data-anchor-id="critical-reflection">Critical reflection</h3>
+<p>Uneven distributions - interpolation. Too many data points in one sample AND irregular sampling as a challenge. Perhaps the most widely used approach is to transform unevenly spaced data into equally spaced data using some form of interpolation. Transforming data with linear interpolation, however, can have significant drawbacks, such as bias, data loss or dilution <span class="citation" data-cites="eckner_framework_2014">(<a href="#ref-eckner_framework_2014" role="doc-biblioref">Eckner 2014</a>)</span>. However, when applied to our specific data and the research question to be answered, these concerns were considered reasonable.</p>
+</section>
+<section id="approach-in-generating-alternative-trajectories" class="level3">
+<h3 class="anchored" data-anchor-id="approach-in-generating-alternative-trajectories">Approach in generating alternative trajectories</h3>
+<p>One problem that comes with using an algorithm to generate alternative trajectories is the creation of a share of unreasonable trajectories. One has to consider this source of error as the aim is to create trajectories that represent plausible alternatives. Thus research is aimining to improve network-based automatic calibration of the ``doubly stochastic” method of <span class="citation" data-cites="Hood2012">(<a href="#ref-Hood2012" role="doc-biblioref"><strong>Hood2012?</strong></a>)</span>. This method produces more heterogeneous, attractive, unbiased, and exhaustive choice sets than other methods, yielding more reliable parameter estimates and predictions.</p>
+</section>
 <section id="wordcount" class="level3">
 <h3 class="anchored" data-anchor-id="wordcount">Wordcount</h3>
 <!-- after installing the wordcountadding, remove the line "#| eval: false" -->
@@ -1654,6 +1680,9 @@ Figure&nbsp;12: Preferred street widths by messengers compared to mean street wi
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
 <div id="ref-broach2012cyclists" class="csl-entry" role="listitem">
 Broach, Joseph, Jennifer Dill, and John Gliebe. 2012. <span>“Where Do Cyclists Ride? A Route Choice Model Developed with Revealed Preference GPS Data.”</span> <em>Transportation Research Part A: Policy and Practice</em> 46 (10): 1730–40.
+</div>
+<div id="ref-eckner_framework_2014" class="csl-entry" role="listitem">
+Eckner, Andreas. 2014. <span>“A Framework for the Analysis of Unevenly Spaced Time Series Data.”</span>
 </div>
 <div id="ref-frejinger_route_2007" class="csl-entry" role="listitem">
 Frejinger, Emma. 2007. <span>“Route Choice Analysis:data, Models, Algorithms and Applications,”</span> December. <a href="https://doi.org/10.5075/EPFL-THESIS-4009">https://doi.org/10.5075/EPFL-THESIS-4009</a>.
@@ -1672,6 +1701,12 @@ Meister, Adrian, Isha Gupta, and Kay W. Axhausen. 2021. <span>“Descriptive Rou
 </div>
 <div id="ref-menghini2009route" class="csl-entry" role="listitem">
 Menghini, Gianluca, Nelson Carrasco, Nadine Schüssler, and Kay W Axhausen. 2009. <span>“Route Choice of Cyclists in Zurich: GPS-Based Discrete Motion Models.”</span> <em>Arbeitsberichte Verkehrs-Und Raumplanung</em> 544.
+</div>
+<div id="ref-newson2009hidden" class="csl-entry" role="listitem">
+Newson, Paul, and John Krumm. 2009. <span>“Hidden Markov Map Matching Through Noise and Sparseness.”</span> In <em>Proceedings of the 17th ACM SIGSPATIAL International Conference on Advances in Geographic Information Systems</em>, 336–43.
+</div>
+<div id="ref-ochieng_map-matching_2003" class="csl-entry" role="listitem">
+Ochieng, Washington Y., Mohammed A. Quddus, and Robert B. Noland. 2003. <span>“Map-Matching in Complex Urban Road Networks.”</span> <em>Brazilian Journal of Cartography (Revista Brasileira de Cartografia)</em> 55 (2): 1–18.
 </div>
 <div id="ref-prato_route_2009" class="csl-entry" role="listitem">
 Prato, Carlo Giacomo. 2009. <span>“Route Choice Modeling: Past, Present and Future Research Directions.”</span> <em>Journal of Choice Modelling</em> 2 (1): 65–100. <a href="https://doi.org/10.1016/S1755-5345(13)70005-8">https://doi.org/10.1016/S1755-5345(13)70005-8</a>.
@@ -2110,7 +2145,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 });
 </script>
 </div> <!-- /content -->
-<script>var lightboxQuarto = GLightbox({"selector":".lightbox","closeEffect":"zoom","loop":false,"descPosition":"bottom","openEffect":"zoom"});
+<script>var lightboxQuarto = GLightbox({"selector":".lightbox","closeEffect":"zoom","openEffect":"zoom","loop":false,"descPosition":"bottom"});
 (function() {
   let previousOnload = window.onload;
   window.onload = () => {
