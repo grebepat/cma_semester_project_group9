@@ -9,6 +9,7 @@ format:
     toc: true
     toc-location: left
     toc-depth: 2
+theme: Minty
 lang: en  
 bibliography: bibliography.bib
 execute:
@@ -18,13 +19,16 @@ execute:
   echo:    false
   output:  false
 ---
-
-```{=html}
-<style>
-body {
-text-align: justify}
-</style>
+```{css}
+     p {
+        text-align: justify;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        text-align: left;
+      }
 ```
+
+
 ```{r install required packages}
 
 options(repos = c(CRAN = "https://cran.rstudio.com"))
@@ -100,13 +104,13 @@ library("agricolae")
 
 ## Abstract
 
-This work explores the possibility of determine the perception of route choice of bike messengers in the city of Zurich. This is done by comparing chosen trajectories with auto generated alternative trajectories. We compare paths of chosen routes (deliveries) with a generated set of modeled routes (choice-set/alternatives) in terms of distance traveled, slope and street width. Our analysis is based on 95 shift performed by 2 messengers. Street network and type and width were taken from the Swisstlm3d data set. For further attributes such as slope and height, the DHM25 was considered.
+This work explores the possibility of determining how bike messengers in Zurich perceive their route choices. This is done by comparing chosen trajectories with auto generated alternative trajectories. We compare paths of chosen routes (deliveries) with a generated set of modeled routes (choice-set/alternatives) in terms of distance traveled, slope and street width. Our analysis is based on 95 shift performed by 2 messengers. Street network and type and width were taken from the Swisstlm3d data set. For further attributes such as slope and height, the DHM25 was considered.
 
 ## Introduction
 
-Route choice models play an important role in many transport applications, for example, intelligent transport systems, GPS navigation and transportation planning [@frejinger_route_2007]. Modeling route choice behavior is essential, given the possibility to appraise travelers perceptions of route characteristics and to forecast travelers' behavior under hypothetical scenarios [@prato_route_2009]. Route choice models can assess travelers' perceptions of various route characteristics such as distance, travel time, cost, number of traffic lights and road types, and relate the results to the individuals' characteristics (e.g. gender, age, income and trip purpose) and can not only help analyzing and understanding travelers' behavior, but also constitute the essential part of traffic assignment methods. Several studies have used route choice modelling to investigate preferences of cyclists in cities for different purposes such as effectiveness of investments in bicycle infrastructure [@hood_gps-based_2011]. @skov-petersen_how_2018-1 investigated route choices by cyclists in Copenhagen (Denmark). The authors found that cyclists expressed a negative utility for length and turns, indicating a preference for shorter and more direct routes. Furthermore they were sensitive to factors such as length, cycling the wrong way, turn frequency, and terrain gradient.
+Route choice models play an important role in many transport applications, for example, intelligent transport systems, GPS navigation and transportation planning [@frejinger_route_2007]. Modeling route choice behavior is essential, given the possibility to appraise travelers perceptions of route characteristics and to forecast travelers' behavior under hypothetical scenarios [@prato_route_2009]. Route choice models can assess travelers' perceptions of various route characteristics such as distance, travel time, cost, number of traffic lights and road types, and relate the results to the individuals' characteristics (e.g. gender, age, income and trip purpose) and can not only help analyzing and understanding travelers' behavior, but also constitute the essential part of traffic assignment methods. Several studies have used route choice modelling to investigate preferences of cyclists in cities for different purposes such as effectiveness of investments in bicycle infrastructure [@hood_gps-based_2011]. @skov-petersen_how_2018 investigated route choices by cyclists in Copenhagen (Denmark). The authors found that cyclists expressed a negative utility for length and turns, indicating a preference for shorter and more direct routes. Furthermore they were sensitive to factors such as length, cycling the wrong way, turn frequency and terrain gradient.
 
-@broach2012cyclists applied various route choice methods to generate routes in Portland. The results reported in the study showed that only 25% of the generated routes replicated the actual routes, and 42.3% of the routes with an 80% overlap. @hood_gps-based_2011 applied the simulation method to generate routes (the doubly stochastic method) in San Francisco. In contrast to other studies, they added environmental and socioeconomic variables to the cost function, such as crime hot-spots, light and weather conditions. However, as in @broach2012cyclists, the capture rates were very low (around 30%). @menghini2009route used the angle elimination method to generate routes in Zurich. The cost function used was limited to driving distance. In the study by @halldorsdottir2014efficiency in Copenhagen, the cost functions included land use and road type. They added a random component to these values to create a representative route choice set. The coverage results (70 %) were better compared to the previous studies.
+A challenge in working with route choice models is the generation of plausible alternative routes. @broach2012cyclists applied various route choice methods to generate routes in Portland. The results reported in the study showed that only 25% of the generated routes replicated the actual routes, and 42.3% of the routes with an 80% overlap. @hood_gps-based_2011 applied the simulation method to generate routes (the doubly stochastic method) in San Francisco. In contrast to other studies, they added environmental and socioeconomic variables to the cost function, such as crime hot-spots, light and weather conditions. However, as in @broach2012cyclists, the capture rates were very low (around 30%). @menghini2009route used the angle elimination method to generate routes in Zurich. The cost function used was limited to driving distance. In the study by @halldorsdottir2014efficiency in Copenhagen, the cost functions included land use and road type. They added a random component to these values to create a representative route choice set. The coverage results (70 %) were better compared to the previous studies. The researchers explored different methods to generate bike routes, but achieving accurate overlap and high capture rates remains challenging. 
 
 This work takes a different approach, exploring the route choices of bike messengers instead of analyzing the route choice of commuters or leisure cyclists. Analyzing the route choices of bike messengers compared to ordinary cyclists can provide insights into efficiency and safety. Due to the fact that bike messengers, are often under time pressure and have a excellent knowledge of the street network, they may choose faster routes, even if they are longer in terms of distance. Additionally, as experienced cyclists, bike messengers can also choose safer or less traveled routes, which can lead to conclusions for the general safety of all cyclists in cities. Furthermore, routes chosen by bike messengers can offer important data on the usage of the city's cycling infrastructure. This can guide decisions on where to focus improvements and enhance route planning and traffic management.
 
@@ -175,7 +179,7 @@ height <- terra::rast("gis_files/dhm25_zh.tif")
 
 ### GPS Data
 
-We utilized GPS data collected with the fitness-tracking-app Strava[^3] . The data was collected by two bike messengers in Zurich and conducted as GPX files. The two messengers have been assigned aliases for the purpose of this analysis. They are referred to as `donner` and `raeubertochter`. The data encompasses 95 shifts, with each shift including multiple trajectories/deliveries. The raw data contains a total number of xyz data points. The shifts vary in terms of distance traveled, working hours, season, weather and the number of deliveries. The available movement data consists of a total of 821’770 gps points tracked between 01.09.2022 09:39:33 and 06.05.2024 18:16:19.
+We utilized GPS data collected with the fitness-tracking-app Strava[^3] . The data was collected by two bike messengers in Zurich and conducted as GPX files. The two messengers have been assigned aliases for the purpose of this analysis. They are referred to as `donner` and `raeubertochter`. The data encompasses 95 shifts, with each shift including multiple deliveries. The shifts vary in terms of distance traveled, working hours, season, weather and the number of deliveries. The available movement data consists of a total of 821’770 gps points tracked between 01.09.2022 09:39:33 and 06.05.2024 18:16:19.
 
 [^3]: https://www.strava.com/dashboard
 
@@ -394,11 +398,11 @@ segmented gps data from `raeubertochter` and `donner`
 
 ### Lost in Transit: Tackling Tunnel GPS Blackouts for Bike Messenger  
 
-In the analysis, we identified segments, that were incorrectly separated. The false separation was caused by the loss of the GPS signal in a cycle tunnel between station Enge and the sports facility Sihlhölzli. The lost signal produced tracking intervals of more than 20 seconds and led to incorrect segmentation. In the following, we solve this problem using a spatial approach to reverse the incorrect segmentation.
+In the analysis, we identified segments, that were incorrectly separated. The false separation was caused by the loss of the GPS signal in a bicycle tunnel between station Enge and the sports facility Sihlhölzli. The lost signal produced tracking intervals of more than 20 seconds and led to incorrect segmentation. In the following, we solve this problem using a spatial approach to reverse the incorrect segmentation.
 
 1.  The tunnel is located at the bottom half of @fig-raeubertochter_seg_context. We see two segments (green / yellow), which were wrongfully separated as they represent the same delivery.
 2.  First we extracted the starting and endpoints of each delivery @fig-start_endpoints. Additionally, a buffer around the entry and exit points of the tunnel was generated. We then overlaid the point feature with the tunnel buffer to identify segments with starting and endpoints near the tunnel @fig-overlay.
-3.  Lastly we compared `segment_id`s of the identified delivery start- and endingpoints close to the tunnel. If an endpoint of `segment_id` `n` and a starting point of `segment_id` `n+1` were both within their respective buffer, a merge of segments was conducted @fig-merged.
+3.  Lastly we compared `segment_ids` of the identified delivery start- and endingpoints close to the tunnel. If an endpoint of `segment_id` `n` and a starting point of `segment_id` `n+1` were both within their respective buffer, a merge of segments was conducted @fig-merged.
 
 For F1, two segments (`segment_id` 49 & 50) were identified and merged back together.
 
@@ -525,7 +529,7 @@ workflow to correct falsely separated segments
 
 ### Pedal powered possibilities: Generating alternative trajectories
 
-We used the HERE API to generate alternative routes. The hereR[^4] package provides an interface to the HERE REST APIs for R. The route function from the hereR package was used to generate alternative routes and enabled the calculation of a maximum of 7 alternative routes per original delivery. Based on the starting and endpoints @fig-original_route of the corrected deliveries `route()` enables calculation of route geometries (LINESTRING) between given pairs of points @fig-alternatives. Routes can be created for various transport modes, as for example car or bicycle. As this step needs a lot of time, the computation was transferred to `preprocessing.R`. The final result consist of the original route combined with one to seven alternative routes @fig-final_result.
+We used the HERE API to generate alternative routes. The hereR[^4] package provides an interface to the HERE REST APIs for R. The `route` function from the hereR package was used to generate alternative routes and enabled the calculation of a maximum of 7 alternative routes per original delivery. Based on the starting and endpoints @fig-original_route of the corrected deliveries `route()` enables calculation of route geometries (LINESTRING) between given pairs of points @fig-alternatives. Routes can be created for various transport modes, as for example car or bicycle. As this step needs a lot of time, the computation was transferred to `preprocessing.R`. The final result consist of the original route combined with one to seven alternative routes @fig-final_result.
 
 [^4]: https://www.rdocumentation.org/packages/hereR/versions/1.0.0.
 
@@ -623,7 +627,7 @@ creating alternative routes based on the start and endpoints of the original rou
 
 ### Map Matching: Fixing gps points to an existing road network
 
-Map matching denotes the process of assigning positional data (mostly in form of GPS coordinates) to some geographic information about the infrastructure, most commonly road networks [@meister_descriptive_2021]. In our map matching process, we used distance-based matching of a point to a road which return the edges that are closest to the trajectory. Geometrically we unified all roads into a single network. We then located the nearest point on this network for each GPS location used the nearest points to update the original GPS locations, effectively mapping each GPS point to its closest location on the road network.
+Map matching denotes the process of assigning positional data (mostly in form of GPS coordinates) to some geographic information about the infrastructure, most commonly road networks [@meister_descriptive_2021]. In our map matching process, we used distance-based matching of a point to a road which return the edges that are closest to the trajectory. Geometrically we unified all roads into a single network. We then located the nearest point on this network for each GPS location and used these coordinates to update the original GPS locations, effectively mapping each GPS point to its closest location on the road network.
 
 ```{r map matching based on Nils method}
 #| echo: true
@@ -710,7 +714,7 @@ Uneven distribution of gps points in original vs. alternative routes
 
 ### Interpolation: Computing points along trajectories
 
-To solve the issue of uneven amounts of data points, we interpolated along the trajectories. We simplified the dataset, transformed it into a linestring, and created an interpolation function. We then applied this function to each linestring, resulting in a new point every 10 meters on the trajectory. As we can see in @fig-interpolation, the interpolation resulted in an even distribution of data points between [alternative]{style="color:#11E2A1;"} and [original]{style="color:#9E1FA2;"} routes.
+To solve the issue of uneven amounts of data points, we interpolated points along the trajectories. We simplified the dataset, transformed it into a linestring, and created an interpolation function. We then applied this function to each linestring, resulting in a new point every 10 meters on the trajectory. As we can see in @fig-interpolation, the interpolation resulted in an even distribution of data points between [alternative]{style="color:#11E2A1;"} and [original]{style="color:#9E1FA2;"} routes.
 
 ```{r Interpolating trajectories, .column-margin}
 #| echo: true
@@ -1025,7 +1029,7 @@ results |>
 
 ### Segment length
 
-Next, we took a closer look at the segment lengths. The segment length of the original routes varies between messengers @fig-segment_length_messenger. On average, a delivery by `raeubertochter` was 2025 meters, while deliveries conducted by `donner` were 1647 meters in average. However, the differences in segment length between the messengers proved to be not significant (t-test, p = 0.166, t = 1.418, df = 32).
+Next, we took a closer look at the segment lengths. The segment length of the original routes varies between messengers @fig-segment_length_messenger. On average, a delivery by `raeubertochter` was 2025 meters, while deliveries conducted by `donner` were 1647 meters long. However, the differences in segment length between the messengers proved to be not significant (t-test, p = 0.166, t = 1.418, df = 32).
 
 ```{r segment length by messengers}
 
@@ -1140,7 +1144,7 @@ Difference in segment lengths by original and shortest alternative A1
 :::
 
 ### Street width
-Next, we investigated whether certain types of streets were preferred by messengers based on street width. Since there is no clear procedure for evaluating preferences, we developed an own approach. In each segment, we calculated the share of the different street widths (1, 2, 3, 4, 6, and 8 meters wide) in contrast to the segment length. For each segment (original and alternative) we get percentages on how much a certain street width was used. We then combined the calculated percentage values for all alternatives per segment. For each segment, we obtained a single alternative that summarizes the shares based on street width. The output tibble shows alternative 1 of segment 1 with its street width percentages. This average alternative can then be compared with the actual route taken by the messengers. 
+Next, we investigated whether certain types of streets were preferred by messengers based on street width. Since there is no clear procedure for evaluating preferences, we developed an own approach. In each segment, we calculated the share of the different street widths (1, 2, 3, 4, 6, and 8 meters wide) in contrast to the segment length. For each segment (original and alternative) we get percentages on how much a certain street width was used. We then combined the calculated percentage values for all alternatives per segment. For each segment, we obtained a single alternative that summarizes the shares based on street width. The output tibble shows alternative 1 of segment 1 with its street width percentages. This average alternative can then be compared with the actual route taken by the messengers. We then  subtracted original percentages from the average alternative percentages to estimate *preference*.
 
 This approach reveals clear preferences or aversions among three street widths. Narrow streets (1 meter wide) are clearly avoided by bike messengers compared to the average alternative, while street widths of two to three meters are clearly preferred @fig-preference.
 
@@ -1234,7 +1238,7 @@ spread$diff <- spread$original - spread$alternative
 ::: {#fig-preference layout-ncol="1"}
 ![](figures/preference.png){.lightbox}
 
-Preferred street widths by messengers compared to mean street widths of all alternatives
+Preferred street widths by messengers compared to average street widths of all alternatives
 :::
 
 ### Slope
@@ -1292,7 +1296,7 @@ slope_final <- slope_sum |>
 Average number of 100m subsegment per delivery with slopes of 2-4%, 4-6% or >6% 
 :::
 
-We further calculated mean slope and maximum slope per subsegment of 100m in each trajectory and created density plots for a better overvoew @fig-slope_density. X-Axis show densities of subsegments while the Y-Axis show mean/max slope in 100m segments in %. No statistical method was applied regarding slope.
+We further calculated mean slope and maximum slope per subsegment of 100m in each trajectory and created density plots for a better overview @fig-slope_density. Y-Axis show densities of subsegments while the X-Axis show mean/max slope in 100m segments in %. No statistical method was applied regarding slope.
 
 ::: {#fig-slope_density layout-nrow="2"}
 ![mean positive slope per 100m subsegments](figures/mean_slope_up.png){#fig-mean_slope_up .lightbox}
@@ -1300,7 +1304,9 @@ We further calculated mean slope and maximum slope per subsegment of 100m in eac
 ![max positive slope per 100m subsegments](figures/max_slope_up.png){#fig-max_slope_up .lightbox}
 
 Mean and Max slopes averaged in 100 meter subsegment
+
 :::
+
 
 # Discussion
 In our study, we demonstrated that bike messengers choose routes that are highly efficient in terms of route length. There are no statistical differences between the shortest possible alternatives and the chosen routes. In 42% of all cases, the original routes were the shortest possible paths. It is intuitive and supported by previous research (e.g. @meister_descriptive_2021, @menghini2009route, @skov-petersen_how_2018) that route length significantly influences route choice. 
@@ -1308,8 +1314,6 @@ In our study, we demonstrated that bike messengers choose routes that are highly
 Regarding the preference for street width, developing a suitable method proved challenging due to the lack of clear criteria for *preference*.
 
 Concerning slope and height differences, the relevance of such an analysis within the spatial context of Zurich is questionable. While bike messengers do have the freedom to choose their routes, the departure and arrival points are fixed, and in a constrained spatial context like the city of Zurich, elevation changes are difficult to avoid. This might explains the low differences / relevance of slope in the present work, an instance that was observed in @menghini2009route as well. If suitable datasets covering a broader spatial context than Zurich were available, this analysis could yield more insightful results, as observed in other studies (e.g. @skov-petersen_how_2018).
-
-## Limitations
 
 ### Map matching
 
@@ -1322,9 +1326,9 @@ There are also free and open-source solutions for better map matching. However, 
 
 ### Critical reflection
 
-Uneven distributions and irregular sampling present a challenge. A common approach is transforming unevenly spaced data into equally spaced data using interpolation. However, linear interpolation can introduce biases, data loss, or dilution [@eckner_framework_2014]. When applied to our specific data and research question, these concerns were deemed acceptable.
+Uneven distributions and irregular sampling presents a challenge in computational movement analysis. A common approach is transforming unevenly spaced data into equally spaced data using interpolation. However, linear interpolation can introduce biases, data loss, or dilution [@eckner_framework_2014]. When applied to our specific data and research question, these concerns were deemed acceptable.
 
-We tried several approaches to even out the distribution or enrich the dataset or to make the amount / location of gps points irrelevant, all with unsatisfactory results. For future projects, transforming GPS points into an existing road network with edges and points, as shown here could be considered. This was not feasible due to poor map matching in our study.
+We tried several approaches to even out the distribution or enrich the dataset or to make the amount / location of gps points irrelevant, all with unsatisfying results. For future projects, transforming GPS points into an existing road network with edges and points, as shown here[^7] could be considered. This was not feasible due to poor map matching in our study.
 
 [^7]: https://r-spatial.org/r/2019/09/26/spatial-networks.html
 
@@ -1332,10 +1336,10 @@ We tried several approaches to even out the distribution or enrich the dataset o
 
 Using an algorithm to generate alternative trajectories can create some unreasonable trajectories. This error source must be considered as the goal is to generate plausible alternatives. Research aims to improve network-based automatic calibration of the *doubly stochastic* method of @hood_gps-based_2011. This method produces more heterogeneous, attractive, unbiased, and exhaustive choice sets than other methods, yielding more reliable parameter estimates and predictions.
 
-As illustrated in @fig-anova, the average segment length increases with the number of available alternatives. This may be due to the fact that with an increased number of alternatives, more unrealistic and/or lengthy options were generated and illustrates the described problem above.
+As illustrated in @fig-anova, the average segment length increases with the number of available alternatives. This may be due to the fact that with an increased number of alternatives, more unrealistic and/or lengthy options were generated, which illustrates the described problem above.
 
 
-## Outlook
+### Outlook
 
 Due to the extensive data preprocessing, including interpolation, we lacked time to enrich the movement data with other relevant parameters. Future work could include and evaluate the following parameters:
 
@@ -1350,13 +1354,18 @@ An interesting evaluation would be whether certain messengers are willing to tak
 
 We have a large and dense dataset that can address many exciting questions. Unfortunately, limited access to the API from `here` prevented us from generating alternatives for all shifts from `raeubertochter` and `donner`. Future work should explore full API access or alternative programs to exploit the dataset's full potential.
 
+# References
 
-### Wordcount
+::: {#refs}
+:::
 
-<!-- after installing the wordcountadding, remove the line "#| eval: false" -->
 
-```{r}
+# Wordcount{ .appendix}
 
+```{r .appendix}
+#| echo: true
+#| output: true
+  
 library("pacman")
 p_install_gh("benmarwick/wordcountaddin")
 wordcountaddin::word_count("index.qmd")
