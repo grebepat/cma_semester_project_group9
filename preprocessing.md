@@ -467,7 +467,6 @@ merged_dataset <- df |>
 ## st_as_s2(): dropping Z and/or M coordinate
 ## st_as_s2(): dropping Z and/or M coordinate
 ## st_as_s2(): dropping Z and/or M coordinate
-## st_as_s2(): dropping Z and/or M coordinate
 ```
 
 ```
