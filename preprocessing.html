@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title></title>
+<style type="text/css">
+/**
+ * Prism.s theme ported from highlight.js's xcode style
+ */
+pre code {
+  padding: 1em;
+}
+.token.comment {
+  color: #007400;
+}
+.token.punctuation {
+  color: #999;
+}
+.token.tag,
+.token.selector {
+  color: #aa0d91;
+}
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol {
+  color: #1c00cf;
+}
+.token.property,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin {
+  color: #c41a16;
+}
+.token.inserted {
+  background-color: #ccffd8;
+}
+.token.deleted {
+  background-color: #ffebe9;
+}
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: #9a6e3a;
+}
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: #836c28;
+}
+.token.function,
+.token.class-name {
+  color: #DD4A68;
+}
+.token.regex,
+.token.important,
+.token.variable {
+  color: #5c2699;
+}
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+.token.italic {
+  font-style: italic;
+}
+</style>
+<style type="text/css">
+body {
+  font-family: sans-serif;
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+body, .footnotes, code { font-size: .9em; }
+li li { font-size: .95em; }
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+pre, img { max-width: 100%; }
+pre, pre:hover {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+pre code {
+  display: block;
+  overflow-x: auto;
+}
+code { font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace; }
+:not(pre) > code, code[class] { background-color: #F8F8F8; }
+code.language-undefined, pre > code:not([class]) {
+  background-color: inherit;
+  border: 1px solid #eee;
+}
+table {
+  margin: auto;
+  border-top: 1px solid #666;
+}
+table thead th { border-bottom: 1px solid #ddd; }
+th, td { padding: 5px; }
+thead, tfoot, tr:nth-child(even) { background: #eee; }
+blockquote {
+  color: #666;
+  margin: 0;
+  padding-left: 1em;
+  border-left: 0.5em solid #eee;
+}
+hr, .footnotes::before { border: 1px dashed #ddd; }
+.frontmatter { text-align: center; }
+#TOC .numbered li { list-style: none; }
+#TOC .numbered { padding-left: 0; }
+#TOC .numbered ul { padding-left: 1em; }
+table, .body h2 { border-bottom: 1px solid #666; }
+.body .appendix, .appendix ~ h2 { border-bottom-style: dashed; }
+.footnote-ref a::before { content: "["; }
+.footnote-ref a::after { content: "]"; }
+section.footnotes::before {
+  content: "";
+  display: block;
+  max-width: 20em;
+}
+
+@media print {
+  body {
+    font-size: 12pt;
+    max-width: 100%;
+  }
+  tr, img { page-break-inside: avoid; }
+}
+@media only screen and (min-width: 992px) {
+  pre { white-space: pre; }
+}
+</style>
+</head>
+<body>
+<div class="frontmatter">
+<div class="title"><h1></h1></div>
+<div class="author"><h2></h2></div>
+<div class="date"><h3></h3></div>
+</div>
+<div class="body">
+<pre><code class="language-r">## Load libraries
+  
+options(repos = c(CRAN = &quot;https://cran.rstudio.com&quot;))
+
+
+install.packages(&quot;pacman&quot;)
+</code></pre>
+<pre><code>## Error in install.packages : Updating loaded packages
+</code></pre>
+<pre><code class="language-r">library(&quot;pacman&quot;)
+
+install.packages(&quot;markdown&quot;)
+</code></pre>
+<pre><code>## Error in install.packages : Updating loaded packages
+</code></pre>
+<pre><code class="language-r">library(&quot;markdown&quot;)
+
+
+## loading necessary libraries
+
+library(&quot;ggh4x&quot;)
+library(&quot;dplyr&quot;)
+library(&quot;ggplot2&quot;)
+library(&quot;tidyr&quot;)
+library(&quot;sf&quot;)
+library(&quot;sp&quot;)
+library(&quot;terra&quot;)
+library(&quot;tmap&quot;)
+library(&quot;zoo&quot;)
+library(&quot;tidyverse&quot;)
+library(&quot;leaflet&quot;)
+library(&quot;XML&quot;)
+library(&quot;lubridate&quot;)
+library(&quot;forcats&quot;)
+library(&quot;httr&quot;)
+library(&quot;hereR&quot;)
+library(&quot;png&quot;)
+library(&quot;gridExtra&quot;)
+library(&quot;RColorBrewer&quot;)
+library(&quot;purrr&quot;)
+library(&quot;ggridges&quot;)
+library(&quot;agricolae&quot;)
+
+
+
+## Import Spatial Data
+# Import spatial data. Geopackage was preprocessed using Quantum GIS Version 3.34.5.
+
+## All Spatial Data is stored in a geopackage called basic_data. Basic_data consists of several layers such as the street network, surface type or housing footprint. The layers were preprocessed and cliped to the extent of the city outline of zurich using Quantum GIS Version 3.34.5
+
+
+## Show layers in basic_data.gpkg
+sf::st_layers(&quot;gis_files/basic_data.gpkg&quot;)
+</code></pre>
+<pre><code>## Driver: GPKG 
+## Available layers:
+##          layer_name        geometry_type features fields       crs_name
+## 1    street_network 3D Multi Line String    30905     28 CH1903+ / LV95
+## 2  street_network_z 3D Multi Line String    30905     28 CH1903+ / LV95
+## 3 housing_footprint     3D Multi Polygon    69547     17 CH1903+ / LV95
+## 4      surface_type        Multi Polygon       19     12 CH1903+ / LV95
+## 5      city_outline        Multi Polygon        1     14 CH1903+ / LV95
+</code></pre>
+<pre><code class="language-r">## Import street network from zurich, based on the swisstlm3d
+streets &lt;- sf::read_sf(&quot;gis_files/basic_data.gpkg&quot;, &quot;street_network_z&quot;) |&gt; 
+  select(objektart, geom) |&gt; 
+  mutate(
+    objektart = as.factor(objektart),
+    width = as.numeric(substr(objektart, start = 1, stop = 1)),
+  ) |&gt; 
+  na.omit()
+
+
+## Import city border of zurich
+outline &lt;- sf::read_sf(&quot;gis_files/basic_data.gpkg&quot;, &quot;city_outline&quot;)
+
+
+## Import housing footprint of zurich
+housing &lt;- sf::read_sf(&quot;gis_files/basic_data.gpkg&quot;, &quot;housing_footprint&quot;) |&gt; 
+  select(objektart, geom) |&gt;
+  mutate(
+    objektart = as.factor(objektart)
+  )
+
+
+## Import surface type of zurich
+surface &lt;- sf::read_sf(&quot;gis_files/basic_data.gpkg&quot;, &quot;surface_type&quot;) |&gt; 
+  select(art, geom) |&gt; 
+  mutate(
+    art = as.factor(art)) |&gt; 
+  filter(art == &quot;fliessendes Gewässer&quot; | art == &quot;stehendes Gewässer&quot; | art == &quot;Strasse, Weg&quot; | art == &quot;Verkehrsinsel&quot;) |&gt; 
+  na.omit()
+
+
+## Import digital height model DHM25, a set of data representing the 3D form of the earth’s surface without vegetation and buildings
+height &lt;- terra::rast(&quot;gis_files/dhm25_zh.tif&quot;)
+
+
+
+## 1. Generating alternative routes using hereR
+
+# Creating alternative routes
+## load all_routes_seg_tunnel_cor from global environment
+load(&quot;rda_files/all_routes_seg_tunnel_cor.rda&quot;)
+
+
+## Extract starting and endpoints from real world trajecotries
+a_to_b &lt;- all_routes_seg_tunnel_cor |&gt; 
+  group_by(segment_id_cor) |&gt; 
+  slice(c(1, n())) |&gt; 
+  ungroup()
+
+
+## quick and dirty overview
+tmap_mode(&quot;plot&quot;)
+</code></pre>
+<pre><code>## tmap mode set to plotting
+</code></pre>
+<pre><code class="language-r">tm_shape(a_to_b) + 
+  tm_dots(col = &quot;gold&quot;, size = .25) +
+  tm_layout(frame = FALSE)
+</code></pre>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAfgAAAH4CAMAAACR9g9NAAAABlBMVEX/1wD///96yJdYAAAACXBIWXMAAAsSAAALEgHS3X78AAAIIklEQVR4nO3c4XbaSBAFYfn9X3pPNrG9S4QswWjmdld9v3Ng1AUaAXK2DyFtqxegNQwPZXgow0MZHsrwUIaHMjyU4aEMD2V4KMNDGR7K8FCGhzI8lOGhDA9leCjDQxkeyvBQhocyPJThoQwPZXgow0MZHsrwUIaHMjyU4aEMD2V4KMNDGR7K8FCGhzI8lOGhDA9leCjDQxkeyvBQhocyPJThoQwPZXgow0MZHsrwUIaHMjyU4aEMD2V4KMNDGR7K8FCGhzI8lOGhDA9leCjDQxkeyvBQhocyPJThoQwPZXgow0MZHsrwUIaHMjyU4aEMP862FZpmoaWm27ZK5eusNJ7hoQxPVam74akMD2V4KMNDGR7K8FCGX2jl5z/DL7Mt/cbH8KtshmcyPNTa7oTwqV+hr11X5kxGWvzOStV/Iov30lT9B2L4XYCBGH4PYiAruqe/1rJXV1f8WSZ6cYUZHsrwVOHdDU9leCjD3y7zpJ+4pl5CL/MCl9SM4ZlSvzAOXFIvod0NfzfDU2V2NzyV4aEMD2V4KMNDGR7K8FCGhzI8lOGhDA9leCjDQxkeyvBQjcP799FH+s5l2yx/oO9YDH/o0ljOTjFi2oY/dGUsZ8cYMm67H2kc/iPk1JOpd3g91XeP1yELQRkeaie8J2qCvxt7aYZgeCjDQ7nHQ9kYyvBQhocyPJThoSaH9xNDilMdhuXyO4IYc39f//NI1l/vdPghqX4/0IUbOkY86ftiFjLQ3PAfn2/4Mw83Y1+IWch0Z/f4kUd+Jfy9Az/3DNzwo891F27dM/xNkg8oKfyty1gh+ogy9vjUN/x7q0o8ojCh4d9cVuARpTE8VWR3w2O5x+sFhocyPJThoQwPZXgow0MZHsrwRYz++tDwNXx+QTvuvtcxD6Obfd+mOuomuCGPorsZnurrTG94JPd4vcfwUOXDZ94Xla/60CbcfN9T9ZkZ/kXVZ1YgfOb6Etd0SYXuiSsMXFIzhocyPNWQ7sNfPIYvYfxpw/AlGB7K8FCGp/LiTmMYHsrwUIaHMjyU4aEMD2V4KFj4Kb+QRv4M+6jAEgea8tt46A/wD/JXONKMJgXuAvwlf4UjGf5L/gqHmnWmzx9r/gqrMTxUje6GH87wTEW6G36wKt0NP5jhoQxP9Vr3+a8WwydYcJ4wfIIFX/oYPoHhqQxPVXWPL/IZRl8G/ceoV89UvlBWGxr+dM4yX3PcbOEURoY/n9Pw/1o5hpF7vOEvWnnPxsinvXAYdv/47L5oEkOf1ZyX9AmvSwxP1WWP12Xlr+pVTd/wP76Z2JeiE/6g6OZneP7Ex08N/y7h5kNfeNVq+EOGh2ob3j3+WNs9Xsfuf8ff+wR60b1d4PtoMsNDGR7KPR7KLlCGh+oY3v3lhIYj8oryjIYTMvwZDSc0K3ztl1fltT8zrXvl8oWXvtjKOyUHqLvy1VaEH/iEt628/8/h88OPfMa7Vk64AWbFG75J+OLlZzP8s0cc+XCJCuzxP2f9778YcUAVzyALV7zu4u7jO9SQZgXDr1zywlF9H7bhFzz3ouf9GB6+4B6PD1+w2RDQ8NTc36jh1fGqXtkMf6DzXtT3yN5X8APieW0PbADDQxm+scO0jbvTwx+9qTtnN/zz8Lkn+iHryjy0aQ7uCogN/2dhb64u8tDm2Z6XDw//7vIiD22eg/Cxe7zhBzgKH+vzTG/411Xs/tuM8FVn87O63WeELzydH5Q80f+RGz5/olvl8BM+zr02nQIj3WqXf89te3yBkRr+lgfOH6nh73nk+JGSu9/5OT5/pHvd81c9BuMon9rrziiPOMgLDA9leCpId8NTGR7K8Jf12Aw6HMNcTS7/GhzCZIaHMjxVi+6GpzI8lOGhDA9leCjDQxn+PX9/tivyaa/EInP9/W1Ole93Kqwx185Ne4YneBa+wFQLLDHYXuQi5fNXGG0vseGhDE9VobvhqQwPZXgow0MZHsrwrylx5X6k+PJXqf9fKlRe+0L1/zONwktfyfBUhucq3d3wI1V6KdRZabhqu36ZhYYr958lllloOMNDVetu+FEqRf+l1mo1jOGhDA9leCjDQxkeyvBQhocyPJThoSjhq32jejvIOGr9gDIDZBqGfwSZhuEfUaZh+QeUYRj+AWUYhn+AGYbd/89pQBl+voiTT8ASaDIuN9avACblNuz1K2CJuf9+/QpYUrobfrKQ7IafLqS74akMD2V4KMNDGR7K8FW9+fHA8EW9+4WA4YsyPJThoQxP5cWdXmF4KMNDGR7K8FCG7+nHa37Dt/Tzp3zDt2R4qNjwKbccthW6x8fcZMxleCjDQ7nHQzl/KMNDGR7K8FCGhzI8lOGhDA9leCjDQxkeyvBQhocyPJThoQwPZXgow0MZHsrwUIaHMjyU4aEMDwUI7x9v7Ok/E/9ca1f/kRh+V/+RGH4XYCR23+NM+tt95Ru+vf29zvDtGR7K8FTu8fpmeCjDQxkeyvBQhocyPFSr8P4cc16nSfkD7AWdBmX4CzoNyvAXtBqU3c9zUlCGhzI8lOGhDA9leCjDQxkeyvBQhocyPJThoQwPZXgow0MZHsrwUIaHMjyU4aEMD2V4KMNDGR7K8FCGhzI8lOGhDA9leCjDQxkeyvBQhocyPJThoQwPZXgow0MZHsrwUIaHMjyU4aEMD2V4KMNDGR7K8FCGhzI8lOGhDA9leCjDQxkeyvBQhocyPJThoQwPZXgow0MZHsrwUIaHMjyU4aEMD2V4KMNDGR7K8FCGhzI8lOGhDA9leCjDQxkeyvBQhof6B12z2bmBqIIGAAAAAElFTkSuQmCC" alt="plot of chunk unnamed-chunk-1" /></p>
+<pre><code class="language-r">## Get accsess to API from here, this API will later generate our alternative routes based on the start and endpoints of the deliveries
+library(&quot;hereR&quot;)
+set_key(&quot;qCKNngXWAlCW3GjOMYSldRSI_LwQ-O0PxOjPUuQPXgc&quot;)
+
+
+## Create a dataframe with even rows -&gt; ENDPOINTS
+df_even &lt;- a_to_b[seq(2, nrow(a_to_b), by = 2), ]
+df_even &lt;- df_even |&gt; 
+  filter(shift == &quot;F1&quot;)
+
+# df_even_raeubertochter &lt;- filter(df_even, messenger == &quot;raeubertochter&quot;)
+# df_even_donner &lt;- filter(df_even, messenger == &quot;donner&quot;)
+
+# if a single smaple is needed
+#df_even &lt;- filter(df_even, segment_id_cor == 57)
+
+
+## Create a dataframe with odd rows -&gt; STARTING POINTS
+df_odd &lt;- a_to_b[seq(1, nrow(a_to_b), by = 2), ]
+df_odd &lt;- df_odd |&gt; 
+  filter(shift == &quot;F1&quot;)
+
+# df_odd_raeubertochter &lt;- filter(df_odd, messenger == &quot;raeubertochter&quot;)
+# df_odd_donner &lt;- filter(df_odd, messenger == &quot;donner&quot;)
+
+# if a single smaple is needed
+#df_odd &lt;- filter(df_odd, segment_id_cor == 57)
+testruns &lt;- nrow(df_even)
+
+
+alternates_final &lt;- map(seq_len(testruns), function(x){
+  alternative_lines = route(origin = df_odd[x,], destination = df_even[x,], transport_mode = &quot;bicycle&quot;, traffic = FALSE, results = 7 , routing_mode = &quot;short&quot;)
+  Sys.sleep(1.2)
+  segment_id = df_even$segment_id_cor[x]
+  alternative_lines$segment_id = segment_id
+  alternative_lines
+})
+
+save(alternates_final, file = &quot;rda_files/alternates_final.rda&quot;)
+
+
+
+df &lt;- enframe(alternates_final)
+df &lt;-  st_as_sf(do.call(rbind, alternates_final))
+
+
+
+## Transform alternative in spatial point dataframe
+merged_dataset &lt;- df |&gt; 
+  group_by(segment_id, rank) |&gt; 
+  summarise(geometry = sf::st_union(geometry))
+</code></pre>
+<pre><code>## st_as_s2(): dropping Z and/or M coordinate
+</code></pre>
+<pre><code>## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+## st_as_s2(): dropping Z and/or M coordinate
+</code></pre>
+<pre><code>## `summarise()` has grouped output by 'segment_id'. You can override using the `.groups` argument.
+</code></pre>
+<pre><code class="language-r">alternative &lt;- merged_dataset |&gt; 
+  st_transform(crs = 2056) |&gt; 
+  st_cast(&quot;POINT&quot;) |&gt; 
+  st_zm(drop = TRUE) |&gt; 
+  rename(segment_id = segment_id) |&gt; 
+  mutate(
+    segment_id = as.factor(segment_id),
+    rank = as.factor(rank)
+  )
+
+
+## drop height information, well add id back later via dhm25
+alternative_final &lt;- st_zm(alternative, drop = TRUE)
+
+# save robject
+save(alternative_final, file = &quot;rda_files/alternative_final.rda&quot;)
+</code></pre>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+</body>
+</html>
