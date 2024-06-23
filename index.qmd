@@ -67,7 +67,6 @@ p_install("agricolae", force = FALSE)
 
 ```
 
-
 ```{r load necessary libraries}
 #| echo: true
 
@@ -101,18 +100,21 @@ library("agricolae")
 
 ## Abstract
 
-This work explores the possibility of determine the perception of route choice of bike messengers in the city of Zurich. This is done by comparing chosen trajectories with auto generated alternative trajectories. We compare paths of chosen routes (deliveries) with a  generated set of modeled routes (choice-set/alternatives) in terms of distance traveled, slope and street width. Our analysis is based on 95 shift performed by 2 messengers. Street network and type and width were taken from the Swisstlm3d data set. For further attributes such as slope and height, the DHM25 was considered.
+This work explores the possibility of determine the perception of route choice of bike messengers in the city of Zurich. This is done by comparing chosen trajectories with auto generated alternative trajectories. We compare paths of chosen routes (deliveries) with a generated set of modeled routes (choice-set/alternatives) in terms of distance traveled, slope and street width. Our analysis is based on 95 shift performed by 2 messengers. Street network and type and width were taken from the Swisstlm3d data set. For further attributes such as slope and height, the DHM25 was considered.
 
 ## Introduction
 
-Route choice models play an important role in many transport applications, for example, intelligent transport systems, GPS navigation and transportation planning [@frejinger_route_2007]. Modeling route choice behavior is essential, given the possibility to appraise travelers perceptions of route characteristics and to forecast travelers' behavior under hypothetical scenarios [@prato_route_2009]. Route choice models can assess travelers' perceptions of various route characteristics such as distance, travel time, cost, number of traffic lights and road types, and relate the results to the individuals' characteristics (e.g. gender, age, income and trip purpose) and can not only help analyzing and understanding travelers' behavior, but also constitute the essential part of traffic assignment methods. Several studies have used route choice modelling to investigate preferences of cyclists in cities for different purposes such as effectiveness of investments in bicycle infrastructure [@hood_gps-based_2011]. @skov-petersen_how_2018-1 investigated route choices by cyclists in Copenhagen (Denmark). The authors found that cyclists expressed a negative utility for length and turns, indicating a preference for shorter and more direct routes. Furthermore they were sensitive to factors such as length, cycling the wrong way, turn frequency, and terrain gradient. @broach2012cyclists applied various route choice methods to generate routes in Portland. The results reported in the study showed that only 25% of the generated routes replicated the actual routes, and 42.3% of the routes with an 80% overlap. @hood_gps-based_2011 applied the simulation method to generate routes (the doubly stochastic method) in San Francisco. In contrast to other studies, they added environmental and socioeconomic variables to the cost function, such as crime hot-spots, light and weather conditions. However, as in @broach2012cyclists, the capture rates were very low (around 30%). @menghini2009route used the angle elimination method to generate routes in Zurich.The cost function used was limited to driving distance. In the study by @halldorsdottir2014efficiency in Copenhagen, the cost functions included land use and road type. They added a random component to these values to create a representative route choice set. The coverage results (70 %) were better compared to the previous studies. This work takes a different approach, exploring the route choices of bike messengers instead of analyzing the route choice of commuters or leisure cyclists. Analyzing the route choices of bike messengers compared to ordinary cyclists can provide insights into efficiency and safety. Due to the fact that bike messengers, are often under time pressure and have a excellent knowledge of the street network, they may choose faster routes, even if they are longer in terms of distance. Additionally, as experienced cyclists, bike messengers can also choose safer or less traveled routes, which can lead to conclusions for the general safety of all cyclists in cities. Furthermore, routes chosen by bike messengers can offer important data on the usage of the city's cycling infrastructure. This can guide decisions on where to focus improvements and enhance route planning and traffic management.
+Route choice models play an important role in many transport applications, for example, intelligent transport systems, GPS navigation and transportation planning [@frejinger_route_2007]. Modeling route choice behavior is essential, given the possibility to appraise travelers perceptions of route characteristics and to forecast travelers' behavior under hypothetical scenarios [@prato_route_2009]. Route choice models can assess travelers' perceptions of various route characteristics such as distance, travel time, cost, number of traffic lights and road types, and relate the results to the individuals' characteristics (e.g. gender, age, income and trip purpose) and can not only help analyzing and understanding travelers' behavior, but also constitute the essential part of traffic assignment methods. Several studies have used route choice modelling to investigate preferences of cyclists in cities for different purposes such as effectiveness of investments in bicycle infrastructure [@hood_gps-based_2011]. @skov-petersen_how_2018-1 investigated route choices by cyclists in Copenhagen (Denmark). The authors found that cyclists expressed a negative utility for length and turns, indicating a preference for shorter and more direct routes. Furthermore they were sensitive to factors such as length, cycling the wrong way, turn frequency, and terrain gradient.
+
+@broach2012cyclists applied various route choice methods to generate routes in Portland. The results reported in the study showed that only 25% of the generated routes replicated the actual routes, and 42.3% of the routes with an 80% overlap. @hood_gps-based_2011 applied the simulation method to generate routes (the doubly stochastic method) in San Francisco. In contrast to other studies, they added environmental and socioeconomic variables to the cost function, such as crime hot-spots, light and weather conditions. However, as in @broach2012cyclists, the capture rates were very low (around 30%). @menghini2009route used the angle elimination method to generate routes in Zurich. The cost function used was limited to driving distance. In the study by @halldorsdottir2014efficiency in Copenhagen, the cost functions included land use and road type. They added a random component to these values to create a representative route choice set. The coverage results (70 %) were better compared to the previous studies.
+
+This work takes a different approach, exploring the route choices of bike messengers instead of analyzing the route choice of commuters or leisure cyclists. Analyzing the route choices of bike messengers compared to ordinary cyclists can provide insights into efficiency and safety. Due to the fact that bike messengers, are often under time pressure and have a excellent knowledge of the street network, they may choose faster routes, even if they are longer in terms of distance. Additionally, as experienced cyclists, bike messengers can also choose safer or less traveled routes, which can lead to conclusions for the general safety of all cyclists in cities. Furthermore, routes chosen by bike messengers can offer important data on the usage of the city's cycling infrastructure. This can guide decisions on where to focus improvements and enhance route planning and traffic management.
 
 ## Research Questions
 
 1.  Do bike messengers always choose the shortest possible route during their deliveries?
 
 2.  How do street network attributes influence the route choice behavior of bike messengers in Zurich?
-
 
 ## Data
 
@@ -661,7 +663,7 @@ Map matched gps points (orange: old coordinates / violet: updated coordinates)
 
 ### Data granularity: Uneven distribution of data points
 
-We encountered a challenge due to the unequal distribution of data points / granularity within original routes and alternative routes @fig-uneven. As derived movement parameters are strongly influenced by the sampling rate, uneven amount of data points can skew calculations due to smaller intervals (more fixes) in original routes detecting more differences in height or slope than wider intervals in alternative routing [@laube_how_2011]. Currently, there are almost twice as many data points in our <span style="color:#9E1FA2;">original</span> segments (rank = 0) than the <span style="color:#11E2A1;">alternatives</span> (rank 1 to 7).
+We encountered a challenge due to the unequal distribution of data points / granularity within original routes and alternative routes @fig-uneven. As derived movement parameters are strongly influenced by the sampling rate, uneven amount of data points can skew calculations due to smaller intervals (more fixes) in original routes detecting more differences in height or slope than wider intervals in alternative routing [@laube_how_2011]. Currently, there are almost twice as many data points in our [original]{style="color:#9E1FA2;"} segments (rank = 0) than the [alternatives]{style="color:#11E2A1;"} (rank 1 to 7).
 
 ```{r uneven distribution gps fixes, .column-margin}
 #| echo: true
@@ -704,12 +706,11 @@ overview |>
 ![](figures/uneven.png){.lightbox}
 
 Uneven distribution of gps points in original vs. alternative routes
-
 :::
 
-### Interpolation: Computing points along trajectories 
+### Interpolation: Computing points along trajectories
 
-To solve the issue of uneven amounts of data points, we interpolated along the trajectories. We simplified the dataset, transformed it into a linestring, and created an interpolation function. We then applied this function to each linestring, resulting in a new point every 10 meters on the trajectory. As we can see in @fig-interpolation, the interpolation resulted in an even distribution of data points between <span style="color:#11E2A1;">alternative</span> and <span style="color:#9E1FA2;">original</span> routes.
+To solve the issue of uneven amounts of data points, we interpolated along the trajectories. We simplified the dataset, transformed it into a linestring, and created an interpolation function. We then applied this function to each linestring, resulting in a new point every 10 meters on the trajectory. As we can see in @fig-interpolation, the interpolation resulted in an even distribution of data points between [alternative]{style="color:#11E2A1;"} and [original]{style="color:#9E1FA2;"} routes.
 
 ```{r Interpolating trajectories, .column-margin}
 #| echo: true
@@ -944,10 +945,15 @@ original_final <- new |>
 
 ```
 
-
 # Results
+
 ### Descriptive Analysis
 
+As shown in @tbl-letters, the original routes are on average shorter compared to the alternatives. With an average segment length of 2229 meters, 385 meters are *saved* per delivery. The longest original segment in Shift `F1` is a delivery of 4039 meters.
+
+For height_up and height_down, cumulative elevation differences between points were calculated, with positive values summarized in height_up and the negative values summarized in height_down. The elevation differences are comparable for both types (original and alternative), with alternatives handling about 4.7 meters more in elevation gain/loss per segment.
+
+To compare the slope between the two types, all segments were divided into subsegments of 100 meters in length. Subsequently, average and maximum slope in these subsegments were calculated for every delivery. The average slope in these subsegments is 0.03% for originals and 0.02% for alternatives. The steepest 100-meter subsegment was driven in an original segment and reached 12.3%.
 
 ```{r descriptive analysis}
 #| echo: true
@@ -1006,32 +1012,28 @@ results |>
 
 ```
 
-
-The chosen routes are in comparison shorter, less steep...
-
 |                           |       | original |       |       | alternative |       |      |
-|---------|---------|:--------|:--------|:--------|:--------|:--------|:--------|
-| variable                  | unit  | min      | mean  | max   | min         | mean  | max  |
-| travel distance           | \[m\] | 584      | 2229  | 4039  | 360         | 2614  | 4640 |
-| average gradient per 100m | \[%\] | -8.88    | 0.03  | 12.3  | -5.98       | 0.02  | 9    |
-| max. + gradient per 100m  | \[%\] | \-       | 4.12  | 75.0  | \-          | 7.86  | 76.6 |
-| height up                 | \[m\] | 0.68     | 20.5  | 87.7  | 0.78        | 25.2  | 113  |
-| height down               | \[m\] | -0.25    | -20.2 | -89.3 | -0.38       | -24.9 | -138 |
+|---------|:-------:|:--------:|:-------:|:-------:|:-------:|:-------:|:--------:|
+| variable                  | unit  |      min | mean  |  max  |     min     | mean  | max  |
+| travel distance           | \[m\] |      584 | 2229  | 4039  |     360     | 2614  | 4640 |
+| average gradient per 100m | \[%\] |    -8.88 | 0.03  | 12.3  |    -5.98    | 0.02  | 9    |
+| max. + gradient per 100m  | \[%\] |       \- | 4.12  | 75.0  |     \-      | 7.86  | 76.6 |
+| height up                 | \[m\] |     0.68 | 20.5  | 87.7  |    0.78     | 25.2  | 113  |
+| height down               | \[m\] |    -0.25 | -20.2 | -89.3 |    -0.38    | -24.9 | -138 |
 
-
+: Comparison of original and alternative routes {#tbl-letters}
 
 ### Segment length
-Segment length was blablabla
 
-```{r segment length}
-#| echo: true
+Next, we took a closer look at the segment lengths. The segment length of the original routes varies between messengers @fig-segment_length_messenger. On average, a delivery by `raeubertochter` was 2025 meters, while deliveries conducted by `donner` were 1647 meters in average. However, the differences in segment length between the messengers proved to be not significant (t-test, p = 0.166, t = 1.418, df = 32).
 
+```{r segment length by messengers}
 
 ## Comparison of length
 length_comp <- new |> 
   select(type, messenger, segment_id, rank,  tot_segment_length)
 
-
+# summarise segment length for each original and alternative segment
 df_spread <- length_comp |> 
   group_by(type, messenger, segment_id, rank) |> 
   summarise(
@@ -1040,6 +1042,33 @@ df_spread <- length_comp |>
   mutate(
     rank = factor(rank, levels = c(0,1,2,3,4,5,6,7))
   )
+
+# how do original segment lengths differ between messengers?
+raeubertochter_original <- df_spread |> 
+  filter(type == "original" & messenger == "raeubertochter")
+
+donner_original <- df_spread |> 
+  filter(type == "original" & messenger == "donner")
+
+# raeubertochter with longer segments, but not statistically significant
+t.test(raeubertochter_original$tot_travel, donner_original$tot_travel)
+
+#t(32) = 1.418, p = 0.166
+
+```
+
+::: {#fig-segment_length_messenger layout-ncol="1"}
+![](figures/seg_length.png){.lightbox}
+
+Difference in segment lengths by messengers
+:::
+
+For each original delivery, between 1 and 7 alternatives were generated. We then examined whether there were differences in segment length between the original routes and alternatives 1 to 7. Among the 57 segments analyzed, the original route was the shortest route in 24 instances, representing 42.1% (compared to all alternatives).
+
+As we can see from the figure @fig-anova, there are differences in segment length between the original and the individual alternatives. However, the pairwise comparison between the original and alternatives 1 to 7 did not reveal any significant differences. It shows that the first alternative (A1) to the original route is the closest in terms of segment length @fig-shortest, with a mean difference of only 43.76 meters (paired t-test, p = 0.193, t = 1.3168, df = 56). The differences in segment length become more pronounced as the number of alternatives increases.
+
+```{r shortest}
+#| echo: true
 
 ## Are there differences between shortest route generated and route choosen?
 comparison1 <- df_spread |> 
@@ -1050,7 +1079,7 @@ comparison1 <- df_spread |>
   spread(key = rank, value = mean) |> 
   rename("original" = "0" , "alternative1" = "1")
 
-t.test(comparison1$original, comparison1$alternative1, paired = T)
+t.test(comparison1$alternative1, comparison1$original, paired = T)
 
 ## Calculate percentage of shortest route messengers vs. alternatives
 
@@ -1093,41 +1122,32 @@ HSD.test(lm, "rank", console=TRUE)
 
 ```
 
-::: {#fig-segment_length_messenger layout-ncol="1"}
-![](figures/seg_length.png){.lightbox}
-
-Difference in segment lengths by messengers
-
-:::
-
-
-
-
-::: {#fig-segment_length_messenger layout-ncol="1"}
-![](figures/seg_length_mess.png){.lightbox}
-
-Difference in segment lengths by messengers and route type
-
-:::
 
 
 ::: {#fig-anova layout-ncol="1"}
 ![](figures/anova.png){.lightbox}
 
-Difference in segment lengths by all route types
+Difference in segment lengths by original routes and all alternatives
 
 :::
 
 
+::: {#fig-shortest layout-ncol="1"}
+![](figures/shortest.png){.lightbox}
 
+Difference in segment lengths by original and shortest alternative
 
+:::
 
 ### Street width
-street width blabla
+Next, we investigated whether certain types of streets were preferred by the messengers based on street width. Since there is no clear procedure for evaluating preferences, we developed an own approach.In each segment, we calculated the share of the different street widths (1, 2, 3, 4, 6, and 8 meters wide) in contrast to the segment length. For each segment (original and alternative) we get percentages on how much a certain street width was used. We then combined the calculated percentage values for all alternatives per segment. For each segment, we obtained a single alternative that summarizes the shares based on street width (see output tibble). This average alternative can then be compared with the actual route taken by the messengers. 
+
+This approach reveals clear preferences or aversions among three street widths. Narrow streets (1 meter wide) are clearly avoided by bike messengers compared to the average alternative, while streets two to three meters wide are clearly preferred @fig-preference.
 
 ```{r width}
 #| echo: true
 
+# summarize enriched network for street width
 width_preference <- new |>
   st_drop_geometry() |> 
   group_by(type, segment_id, rank, width) |> 
@@ -1142,17 +1162,20 @@ complete_set <- expand.grid(segment_id = unique(width_preference$segment_id),
                            type = as.factor(c("original", "alternative")))
                            #messenger = as.factor(c("raeubertochter", "donner")))
 
+# create a complete set of street widths
 complete_set <- complete_set |> 
   filter(!(type == "original" & rank != 0)) |> 
   filter(!(type == "alternative" & rank == 0)) 
 
-##Left join this set with your original data frame
+##Left join this set with  original data frame
 complete_df <-  full_join(complete_set, width_preference, by = c("type","segment_id", "rank", "width"))
 
 
 #Replace NA values with 0
 complete_df[is.na(complete_df)] <- 0
 
+
+# a complete set was generated, for every segment, type and rank, shared street widths were calculated
 
 width_preference2 <- complete_df |> 
    group_by(type, segment_id, rank) |>
@@ -1166,12 +1189,12 @@ width_preference2 <- complete_df |>
   na.omit()
 
 
+
 width_preference2 <- width_preference2 |> 
    group_by(type, segment_id, rank) |>
   mutate(
     sum_tot = sum(perc)
   )
-
 
 choice_avg <- width_preference2 |> 
    group_by(type, segment_id, width) |>
@@ -1188,45 +1211,35 @@ all_together <- choice_avg |>
 
 
 spread <- spread(all_together, key = type, value = mean_perc)
+
+# do original routes differ from averaged alternatives?
 spread$diff <- spread$original - spread$alternative
 
 
-spread <- spread[order(spread$diff),]
-spread$width <- factor(spread$width, levels = spread$width,
-                       labels = c("1m Strasse", "6m Strasse", "8m Strasse",
-                                  "4m Strasse", "2m Strasse", "3m Strasse"))
 
-
-ggplot(spread, aes(x = width, y = diff)) +
-  geom_segment(aes(x = width, xend = width, y = 0, yend = diff), color = "grey60", lwd = 1.5) +
-  geom_point(size = 5, pch = 21, bg = "#9E1FA2", color = "#9E1FA2") +
-  coord_flip() +
-  theme_minimal() +
-  labs(
-    y = "  ←   Less Preferred   |  Preferred   →",
-    x = ""
-  ) +
-  theme(
-    axis.text.x = element_blank()
-  )
- 
 
 ```
 
+```{r width .column-margin}
+#| output: true
+#| echo: true
+#| column: margin
+
+ width_preference2 |> 
+  filter(segment_id == 1 & rank == 1) |> 
+   print()
+
+```
 
 ::: {#fig-preference layout-ncol="1"}
 ![](figures/preference.png){.lightbox}
 
 Preferred street widths by messengers compared to mean street widths of all alternatives
-
 :::
-
-
-
 
 ### Slope
 
-```{r}
+```{r slope}
 #| echo: true
 
 
@@ -1252,76 +1265,59 @@ slope_long <- slope |>
 
 slope_result <- slope |> 
   st_drop_geometry() |> 
-  group_by(type, segment_id) |> 
+  group_by(type, segment_id, rank) |> 
   summarise(
-    "zwei_bis_sechs" = mean(mean_slope_up >= 2 & mean_slope_up < 4),
-    "sechs_bis_zehn" = mean(mean_slope_up >= 4 & mean_slope_up < 6),
-    "mehr_als_10" = mean(mean_slope_up >=6)
+    kat1 = sum(mean_slope_up > 2 & mean_slope_up <= 4),
+    kat2 = sum(mean_slope_up > 4 & mean_slope_up <= 6),
+    kat3 = sum(mean_slope_up > 6)
       )
 
-sloppy <- pivot_longer(slope_result, -c(type, segment_id))
-
-sloppy$log <- log10(sloppy$value)
-
-
-ggplot(sloppy, aes(x = name, y = value, fill = type)) +
-  geom_boxplot() +
-  scale_y_log10()
-
-
-boxplot(sloppy$log)
 
 
 
-lm = aov(value ~ type+name, data = sloppy)
+slope_sum <- pivot_longer(slope_result, -c(type, segment_id, rank))
 
- par(mfrow = c(2, 2))
- plot(lm)
+slope_sum$name <- factor(slope_sum$name, levels = c("kat1", "kat2", "kat3"), labels = c("2-4%", "4-6%", ">6%"))
 
-summary(lm)
-summary.lm(lm)  
-TukeyHSD(lm)
-HSD.test(lm, "name", console=TRUE)
-
-
+slope_final <- slope_sum |> 
+  group_by(type, segment_id, name) |> 
+  summarise(
+      mean_count = mean(value) )
 
 
 ```
 
-
-
-::: {#fig-preference layout-nrow="2"}
+::: {layout-nrow="2"}
 ![mean bebe](figures/mean_slope_up.png){.lightbox}
 
 ![max bebe](figures/max_slope_up.png){.lightbox}
 
-
-
-
 Mean and Max slopes averaged in 100 meter subsegment
-
 :::
 
 # Discussion
 
+machen Höhenunterschiede / Slope überhaupt viel Sinn bei routen die in einem so kleinen spatial context konentriert sind? Es gibt de fakto keine Möglichkeiten den Uetli- oder Züroiberg zu Umfahren, die Messengers aber auch alternativen sind gezwungen die gleichen Höhenunterschiede zu fahren. Vielleicht macht es hier mehr sinn in einen grsseren spatial context zu gehen, wo hügel umfahren werden können?
+
 # Limitations / Outlook
-
-
-
-
-
-
-
-
-
-
 
 ### Wordcount
 
 <!-- after installing the wordcountadding, remove the line "#| eval: false" -->
 
+wordcountaddin
+
 ```{r}
 #| eval: false
 
+wordcountaddin::word_count("index.qmd")
+
+?wordcountaddin
+
+```
+
+```{r}
+library("pacman")
+p_install_gh("benmarwick/wordcountaddin")
 wordcountaddin::word_count("index.qmd")
 ```

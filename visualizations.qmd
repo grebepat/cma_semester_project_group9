@@ -1229,5 +1229,53 @@ scale_fill_manual(values =c("#11E2A1","#11E2A1","#11E2A1","#11E2A1","#11E2A1","#
 ggsave(plot = max_slope_up, "figures/max_slope_up.png", width = 300, height = 150, dpi = 500, units = "mm")
 
 
+
+# create counts per category
+
+slope_long <- slope |> 
+  select(type, segment_id, rank, index, mean_slope_up)
+
+
+slope_result <- slope |> 
+  st_drop_geometry() |> 
+  group_by(type, segment_id, rank) |> 
+  summarise(
+    kat1 = sum(mean_slope_up > 2 & mean_slope_up <= 4),
+    kat2 = sum(mean_slope_up > 4 & mean_slope_up <= 6),
+    kat3 = sum(mean_slope_up > 6)
+      )
+
+
+
+
+slope_sum <- pivot_longer(slope_result, -c(type, segment_id, rank))
+
+slope_sum$name <- factor(slope_sum$name, levels = c("kat1", "kat2", "kat3"), labels = c("2-4%", "4-6%", ">6%"))
+
+slope_final <- slope_sum |> 
+  group_by(type, segment_id, name) |> 
+  summarise(
+      mean_count = mean(value) )
+
+
+
+
+slope_category <- ggplot(slope_final, aes(x = name, y = mean_count, fill = type,   alpha = 0.75)) +
+  geom_boxplot() +
+  scale_y_log10() +
+   labs(y = "mean count per segment (Log Scale)",
+        x = "slope categories") +
+  scale_fill_manual(values = c("#11E2A1","#9E1FA2")) +
+   theme_classic() +
+  theme(
+    legend.position = "none",
+    axis.title.y = element_text(margin = margin(r = 20)),
+    axis.title.x = element_text(margin = margin(t = 20))
+  )
+
+ggsave(plot = slope_category, "figures/category.png", width = 300, height = 150, dpi = 500, units = "mm")
+
+
+
 ```
 
