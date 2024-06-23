@@ -120,7 +120,7 @@ This work takes a different approach, exploring the route choices of bike messen
 
 ### Context Data
 
-All contextual data for enriching the route network is sourced from open-source platforms. SwissTLM3D[^1] provided the street network, street type, and width. The digital terrain model (DHM25)[^2] was used for obtaining the slope of the streets. DHM25 is available with a resolution of 0.5 meters. The contextual data was preprocessed using Quantum GIS Version 3.34.5. All spatial data has been clipped to the outline of the city of Zurich beforehand.
+All contextual data for enriching the route network is sourced from open-source platforms. SwissTLM3D[^1] provided the street network, street type, and width. The digital terrain model DHM25[^2] was used for obtaining the slope of the streets. DHM25 is available with a resolution of 0.5 meters. The contextual data was preprocessed using Quantum GIS Version 3.34.5. All spatial data has been clipped to the outline of the city of Zurich beforehand.
 
 [^1]: https://www.swisstopo.admin.ch/de/landschaftsmodell-swisstlm3d
 
@@ -175,7 +175,7 @@ height <- terra::rast("gis_files/dhm25_zh.tif")
 
 ### GPS Data
 
-We utilized GPS data collected with the fitness-tracking-app Strava[^3] . The data was collected by two bike messengers in Zurich and conducted as GPX files. The two messengers have been assigned aliases for the purpose of this analysis. They are referred to as `donner` and `raeubertochter`. The data encompasses 95 shifts, with each shift including multiple trajectories/deliveries. The raw data contains a total number of xyz data points. The shifts vary in terms of distance traveled, working hours, season, weather and the number of deliveries. The available movement data consists of a total of **821’770 gps points** tracked between 01.09.2022 09:39:33 and 06.05.2024 18:16:19.
+We utilized GPS data collected with the fitness-tracking-app Strava[^3] . The data was collected by two bike messengers in Zurich and conducted as GPX files. The two messengers have been assigned aliases for the purpose of this analysis. They are referred to as `donner` and `raeubertochter`. The data encompasses 95 shifts, with each shift including multiple trajectories/deliveries. The raw data contains a total number of xyz data points. The shifts vary in terms of distance traveled, working hours, season, weather and the number of deliveries. The available movement data consists of a total of 821’770 gps points tracked between 01.09.2022 09:39:33 and 06.05.2024 18:16:19.
 
 [^3]: https://www.strava.com/dashboard
 
@@ -392,7 +392,7 @@ save(donner_seg, file = "rda_files/donner_seg.rda")
 segmented gps data from `raeubertochter` and `donner`
 :::
 
-### Lost in Transit: Tackling Tunnel GPS Blackouts for Bike Messenger
+### Lost in Transit: Tackling Tunnel GPS Blackouts for Bike Messenger  
 
 In the analysis, we identified segments, that were incorrectly separated. The false separation was caused by the loss of the GPS signal in a cycle tunnel between station Enge and the sports facility Sihlhölzli. The lost signal produced tracking intervals of more than 20 seconds and led to incorrect segmentation. In the following, we solve this problem using a spatial approach to reverse the incorrect segmentation.
 
@@ -525,7 +525,7 @@ workflow to correct falsely separated segments
 
 ### Pedal powered possibilities: Generating alternative trajectories
 
-We used the HERE API to generate alternative routes. The hereR[^4] package provides an interface to the HERE REST APIs for R. The route function from the hereR package was used to generate alternative routes and enabled the calculation of a maximum of 7 alternative routes per original delivery. Based on the starting and endpoints of the corrected deliveries @fig-original_route ´route()´ enables calculation of route geometries (LINESTRING) between given pairs of points @fig-alternatives. Routes can be created for various transport modes, as for example 'car' or 'bicycle'. As this step needs a lot of time, the computation was transfered to `preprocessing.qmd`. The final result consist of the original route combined with one to seven alternative routes @fig-final_result.
+We used the HERE API to generate alternative routes. The hereR[^4] package provides an interface to the HERE REST APIs for R. The route function from the hereR package was used to generate alternative routes and enabled the calculation of a maximum of 7 alternative routes per original delivery. Based on the starting and endpoints @fig-original_route of the corrected deliveries `route()` enables calculation of route geometries (LINESTRING) between given pairs of points @fig-alternatives. Routes can be created for various transport modes, as for example car or bicycle. As this step needs a lot of time, the computation was transferred to `preprocessing.R`. The final result consist of the original route combined with one to seven alternative routes @fig-final_result.
 
 [^4]: https://www.rdocumentation.org/packages/hereR/versions/1.0.0.
 
@@ -656,14 +656,14 @@ save(filtered_df, file = "rda_files/filtered_df.rda")
 ```
 
 ::: {#fig-mapmatching layout-ncol="1"}
-![map matched gps points](figures/map_matching.png){#fig-map_matching .lightbox}
+![](figures/map_matching.png){#fig-map_matching .lightbox}
 
-Map matched gps points (orange: old coordinates / violet: updated coordinates)
+Map matched gps points ([old coordinates]{style="color:orange;"} / [updated coordinates]{style="color:#9E1FA2;"})
 :::
 
 ### Data granularity: Uneven distribution of data points
 
-We encountered a challenge due to the unequal distribution of data points / granularity within original routes and alternative routes @fig-uneven. As derived movement parameters are strongly influenced by the sampling rate, uneven amount of data points can skew calculations due to smaller intervals (more fixes) in original routes detecting more differences in height or slope than wider intervals in alternative routing [@laube_how_2011]. Currently, there are almost twice as many data points in our [original]{style="color:#9E1FA2;"} segments (rank = 0) than the [alternatives]{style="color:#11E2A1;"} (rank 1 to 7).
+We encountered a challenge due to the unequal distribution of data points / granularity within original routes and alternative routes @fig-uneven. As derived movement parameters are strongly influenced by the sampling rate, uneven amount of data points can skew calculations due to smaller intervals (more fixes) in original routes detecting more differences in height or slope than wider intervals in alternative routing [@laube_how_2011]. Currently, there are often twice as many data points in our [original]{style="color:#9E1FA2;"} segments (rank = 0) than the [alternatives]{style="color:#11E2A1;"} (rank 1 to 7).
 
 ```{r uneven distribution gps fixes, .column-margin}
 #| echo: true
@@ -1140,7 +1140,7 @@ Difference in segment lengths by original and shortest alternative A1
 :::
 
 ### Street width
-Next, we investigated whether certain types of streets were preferred by the messengers based on street width. Since there is no clear procedure for evaluating preferences, we developed an own approach. In each segment, we calculated the share of the different street widths (1, 2, 3, 4, 6, and 8 meters wide) in contrast to the segment length. For each segment (original and alternative) we get percentages on how much a certain street width was used. We then combined the calculated percentage values for all alternatives per segment. For each segment, we obtained a single alternative that summarizes the shares based on street width. The output tibble shows alternative 1 of segment 1 with its street width percentages. This average alternative can then be compared with the actual route taken by the messengers. 
+Next, we investigated whether certain types of streets were preferred by messengers based on street width. Since there is no clear procedure for evaluating preferences, we developed an own approach. In each segment, we calculated the share of the different street widths (1, 2, 3, 4, 6, and 8 meters wide) in contrast to the segment length. For each segment (original and alternative) we get percentages on how much a certain street width was used. We then combined the calculated percentage values for all alternatives per segment. For each segment, we obtained a single alternative that summarizes the shares based on street width. The output tibble shows alternative 1 of segment 1 with its street width percentages. This average alternative can then be compared with the actual route taken by the messengers. 
 
 This approach reveals clear preferences or aversions among three street widths. Narrow streets (1 meter wide) are clearly avoided by bike messengers compared to the average alternative, while street widths of two to three meters are clearly preferred @fig-preference.
 
@@ -1292,51 +1292,73 @@ slope_final <- slope_sum |>
 Average number of 100m subsegment per delivery with slopes of 2-4%, 4-6% or >6% 
 :::
 
-We further calculated mean slope and maximum slope per subsegment of 100m in each trajectory and created density plots for a better oversight @fig-slope_density. X-Axis show densities of subsegments while the Y-Axis show mean/max slope in 100m segments in %. No statistical method was applied regarding slope.
+We further calculated mean slope and maximum slope per subsegment of 100m in each trajectory and created density plots for a better overvoew @fig-slope_density. X-Axis show densities of subsegments while the Y-Axis show mean/max slope in 100m segments in %. No statistical method was applied regarding slope.
 
 ::: {#fig-slope_density layout-nrow="2"}
-![mean positive slope per 100m subsegments](figures/mean_slope_up.png){.lightbox}
+![mean positive slope per 100m subsegments](figures/mean_slope_up.png){#fig-mean_slope_up .lightbox}
 
-![max positive slope per 100m subsegments](figures/max_slope_up.png){.lightbox}
+![max positive slope per 100m subsegments](figures/max_slope_up.png){#fig-max_slope_up .lightbox}
 
 Mean and Max slopes averaged in 100 meter subsegment
 :::
 
 # Discussion
+In our study, we demonstrated that bike messengers choose routes that are highly efficient in terms of route length. There are no statistical differences between the shortest possible alternatives and the chosen routes. In 42% of all cases, the original routes were the shortest possible paths. It is intuitive and supported by previous research (e.g. @meister_descriptive_2021, @menghini2009route, @skov-petersen_how_2018) that route length significantly influences route choice. 
 
-machen Höhenunterschiede / Slope überhaupt viel Sinn bei routen die in einem so kleinen spatial context konentriert sind? Es gibt de fakto keine Möglichkeiten den Uetli- oder Züroiberg zu Umfahren, die Messengers aber auch alternativen sind gezwungen die gleichen Höhenunterschiede zu fahren. Vielleicht macht es hier mehr sinn in einen grsseren spatial context zu gehen, wo hügel umfahren werden können?
+Regarding the preference for street width, developing a suitable method proved challenging due to the lack of clear criteria for *preference*.
 
-# Limitations / Outlook
+Concerning slope and height differences, the relevance of such an analysis within the spatial context of Zurich is questionable. While bike messengers do have the freedom to choose their routes, the departure and arrival points are fixed, and in a constrained spatial context like the city of Zurich, elevation changes are difficult to avoid. This might explains the low differences / relevance of slope in the present work, an instance that was observed in @menghini2009route as well. If suitable datasets covering a broader spatial context than Zurich were available, this analysis could yield more insightful results, as observed in other studies (e.g. @skov-petersen_how_2018).
 
-### Map matching sucks
+## Limitations
 
-due to certain constraints and available resources, we adopted a simple approach of distance-based point-to-road matching, which has been identified with several limitations [@meister_descriptive_2021]. More sophisticated methods, such as the one proposed by @newson2009hidden that employs Hidden Markov Models (HMMs), are more effective as they consider factors like measurement noise and the structure of the road network, thereby avoiding the simplistic distance-based point-to-road matching. For implementing map matching in intricate urban road networks, it's crucial to use map matching tools that consider various sources of error linked with position sensors, the vehicle's historical trajectory, topological data about the road network (for instance, link connectivity and alignment), and the vehicle's direction and speed. These factors collectively help in accurately determining the correct link where the vehicle is located [@ochieng_map-matching_2003].
+### Map matching
+
+Due to certain constraints and available resources, we adopted a simple approach of distance-based point-to-road matching, which has several limitations [@meister_descriptive_2021]. More sophisticated methods, such as those using Hidden Markov Models (HMMs), are more effective as they consider factors like measurement noise and the road network structure, avoiding simplistic distance-based point-to-road matching [@newson2009hidden]. For implementing map matching in intricate urban road networks, it is crucial to use tools that consider various sources of error linked with position sensors, the vehicle's historical trajectory, topological data about the road network, and the vehicle's direction and speed. These factors collectively help accurately determine the correct link where the vehicle is located [@ochieng_map-matching_2003].
+
+There are also free and open-source solutions for better map matching. However, implementing them in R proved too time-consuming. Future projects could explore APIs from osrm[^5] or valhalla[^6].
+
+[^5]: http://project-osrm.org/
+[^6]: https://towardsdatascience.com/map-matching-done-right-using-valhallas-meili-f635ebd17053
 
 ### Critical reflection
 
-Uneven distributions - interpolation. Too many data points in one sample AND irregular sampling as a challenge. Perhaps the most widely used approach is to transform unevenly spaced data into equally spaced data using some form of interpolation. Transforming data with linear interpolation, however, can have significant drawbacks, such as bias, data loss or dilution [@eckner_framework_2014]. However, when applied to our specific data and the research question to be answered, these concerns were considered reasonable.
+Uneven distributions and irregular sampling present a challenge. A common approach is transforming unevenly spaced data into equally spaced data using interpolation. However, linear interpolation can introduce biases, data loss, or dilution [@eckner_framework_2014]. When applied to our specific data and research question, these concerns were deemed acceptable.
+
+We tried several approaches to even out the distribution or enrich the dataset or to make the amount / location of gps points irrelevant, all with unsatisfactory results. For future projects, transforming GPS points into an existing road network with edges and points, as shown here could be considered. This was not feasible due to poor map matching in our study.
+
+[^7]: https://r-spatial.org/r/2019/09/26/spatial-networks.html
 
 ### Approach in generating alternative trajectories
 
-One problem that comes with using an algorithm to generate alternative trajectories is the creation of a share of unreasonable trajectories. One has to consider this source of error as the aim is to create trajectories that represent plausible alternatives. Thus research is aimining to improve network-based automatic calibration of the \`\`doubly stochastic” method of @Hood2012. This method produces more heterogeneous, attractive, unbiased, and exhaustive choice sets than other methods, yielding more reliable parameter estimates and predictions.
+Using an algorithm to generate alternative trajectories can create some unreasonable trajectories. This error source must be considered as the goal is to generate plausible alternatives. Research aims to improve network-based automatic calibration of the *doubly stochastic* method of @hood_gps-based_2011. This method produces more heterogeneous, attractive, unbiased, and exhaustive choice sets than other methods, yielding more reliable parameter estimates and predictions.
+
+As illustrated in @fig-anova, the average segment length increases with the number of available alternatives. This may be due to the fact that with an increased number of alternatives, more unrealistic and/or lengthy options were generated and illustrates the described problem above.
+
+
+## Outlook
+
+Due to the extensive data preprocessing, including interpolation, we lacked time to enrich the movement data with other relevant parameters. Future work could include and evaluate the following parameters:
+
+-   Number of intersections in a segment
+-   Number of traffic lights/stops
+-   Number of left/right turns
+-   Proportion of bike lanes/bike routes in a segment
+-   Traffic
+-   Speed limits
+
+An interesting evaluation would be whether certain messengers are willing to take longer routes to avoid steeper ones. There are likely thresholds where increased route length does not justify reduced steepness anymore.
+
+We have a large and dense dataset that can address many exciting questions. Unfortunately, limited access to the API from `here` prevented us from generating alternatives for all shifts from `raeubertochter` and `donner`. Future work should explore full API access or alternative programs to exploit the dataset's full potential.
+
 
 ### Wordcount
 
 <!-- after installing the wordcountadding, remove the line "#| eval: false" -->
 
-wordcountaddin
-
 ```{r}
-#| eval: false
 
-wordcountaddin::word_count("index.qmd")
-
-?wordcountaddin
-
-```
-
-```{r}
 library("pacman")
 p_install_gh("benmarwick/wordcountaddin")
 wordcountaddin::word_count("index.qmd")
+
 ```

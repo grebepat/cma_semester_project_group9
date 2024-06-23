@@ -791,7 +791,7 @@ tm_shape(housing5) +
 tm_shape(subset_data) +
   tm_dots(size = 0.8, col = "#9E1FA2", alpha = 0.8, border.col = "grey25", border.alpha = 0.2) +
   tm_shape(subset_data2) +
-  tm_symbols(size = 0.8, col = "rank", palette = c("#11E2A1", "#2b83ba"), alpha = 0.8, border.col = "grey25", border.alpha = 0.2, legend.col.show = FALSE) +
+  tm_symbols(size = 0.8, col = "rank", palette = c("#11E2A1", "#11E2A1"), alpha = 0.8, border.col = "grey25", border.alpha = 0.2, legend.col.show = FALSE) +
   tm_layout(frame = FALSE) 
  
 
@@ -863,7 +863,7 @@ df_57_interp <- df_57_interp |>
 subset_data_interp <- df_57_interp[seq(1, nrow(df_57_interp), by = 2), ]
 
 
-my_palette6 = c( "#9E1FA2","#11E2A1","#2b83ba")
+my_palette6 = c( "#9E1FA2","#11E2A1","#11E2A1")
 
 tmap_mode("plot")
 
@@ -971,10 +971,10 @@ df_spread_original <- df_spread |>
   filter(type == "original")
 
 
-seg_length <- ggplot(df_spread_original, aes(x = messenger, y = tot_travel, fill = messenger,   alpha = 0.75)) +
-  geom_boxplot() +
+seg_length <- ggplot(df_spread_original, aes(x = messenger, y = tot_travel, fill = messenger)) +
+  geom_boxplot(alpha = 0.75) +
    labs(y = "total segment length [m]") +
-  scale_fill_manual(values = c("orange", "darkred")) +
+  scale_fill_manual(values = c("gold", "forestgreen")) +
    theme_classic() +
   theme(
     legend.position = "none", 
@@ -1260,7 +1260,7 @@ slope_final <- slope_sum |>
 
 
 
-slope_category <- ggplot(slope_final, aes(x = name, y = mean_count, fill = type,   alpha = 0.75)) +
+slope_category <- ggplot(slope_final, aes(x = name, y = mean_count, fill = type), alpha = 0.75) +
   geom_boxplot() +
   scale_y_log10() +
    labs(y = "mean count of subsegments per delivery (Log Scale)",
@@ -1268,8 +1268,7 @@ slope_category <- ggplot(slope_final, aes(x = name, y = mean_count, fill = type,
   scale_fill_manual(values = c("#11E2A1","#9E1FA2")) +
    theme_classic() +
   theme(
-    legend.position = "none",
-    axis.title.y = element_text(margin = margin(r = 20)),
+       axis.title.y = element_text(margin = margin(r = 20)),
     axis.title.x = element_text(margin = margin(t = 20))
   )
 
