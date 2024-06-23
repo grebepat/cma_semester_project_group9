@@ -1,6 +1,6 @@
 ---
 title: Cycling Secrets
-subtitle: Decoding Bike Messenger Paths for Efficiency
+subtitle: Decoding bike messenger paths for efficiency
 author: Maurin Huonder and Patrick Greber
 date: 2024-06-23
 format: 

@@ -59,7 +59,6 @@ height <- terra::rast("gis_files/dhm25_zh.tif")
 
 ```
 
-
 ## 1. Visualize raw Data
 
 Visualize raw GPS data of both messengers using a simple ggplot.
@@ -169,7 +168,7 @@ print(tm_raw_context)
 
 
 ## save as a png
-tmap_save(tm_raw_context, "figures/raeubertochter_raw_context.png", width = 250, height = 200, dpi = 250, units = "mm")
+tmap_save(tm_raw_context, "figures/raeubertochter_raw_context.png", width = 250, height = 200, dpi = 300, units = "mm")
 
 ```
 
@@ -212,8 +211,6 @@ leaflet() |>
 
 
 ```
-
-
 
 ## 2. Visualize sampling interval
 
@@ -352,7 +349,7 @@ print(tm_seg_context)
 
 
 ## save as png
-tmap_save(tm_seg_context, "figures/raeubertochter_seg_context.png", width = 250, height = 200, dpi = 250, units = "mm")
+tmap_save(tm_seg_context, "figures/raeubertochter_seg_context.png", width = 250, height = 200, dpi = 300, units = "mm")
 
 
 ```
@@ -373,7 +370,6 @@ tm_shape(raw_data) +
   tm_facets(by = "messenger", sync = TRUE, ncol = 2)
 
 ```
-
 
 ## 4. Visualize Tunnel Merging
 
@@ -647,7 +643,7 @@ tmap_save(tm6, "figures/final_result.png", width = 300, height = 125, dpi = 300,
 
 ```
 
-## 6.  Visualize Map Matching
+## 6. Visualize Map Matching
 
 Interactive visualization of map matching results
 
@@ -888,7 +884,7 @@ tmap_save(problem_solved, "figures/problem_solved.png", width = 125, height = 22
 
 ```
 
-## 9.  Visualize alternatives and originals
+## 9. Visualize alternatives and originals
 
 ```{r visualize original and alternatives per messenger, fig.width=12, fig.height=12}
 
@@ -920,7 +916,7 @@ raeubertochter_final <- ggplot() +
   ) +
   labs(title = "Raeubertochter")
 
-ggsave(plot = raeubertochter_final, "figures/raeubertochter_final.png", width = 100, height = 100, dpi = 250, units = "mm")
+ggsave(plot = raeubertochter_final, "figures/raeubertochter_final.png", width = 100, height = 100, dpi = 300, units = "mm")
 
 
 
@@ -941,7 +937,7 @@ donner_final <- ggplot() +
   labs(title = "Donner")
 
 
-ggsave(plot = donner_final, "figures/donner_final.png", width = 100, height = 100, dpi = 250, units = "mm")
+ggsave(plot = donner_final, "figures/donner_final.png", width = 100, height = 100, dpi = 300, units = "mm")
 
 
 ```
@@ -1277,4 +1273,3 @@ ggsave(plot = slope_category, "figures/category.png", width = 300, height = 150,
 
 
 ```
-
